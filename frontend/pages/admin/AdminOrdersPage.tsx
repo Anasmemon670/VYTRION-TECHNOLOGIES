@@ -121,18 +121,18 @@ export function AdminOrdersPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-white text-3xl mb-2">Manage Orders</h1>
-            <p className="text-slate-400">{orders.length} total orders</p>
+            <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Manage Orders</h1>
+            <p className="text-slate-400 text-sm sm:text-base">{orders.length} total orders</p>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-all flex items-center gap-2"
+            className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
           >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
           </button>
         </div>
 
@@ -155,24 +155,24 @@ export function AdminOrdersPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="bg-slate-800 rounded-xl p-6 border border-slate-700"
+              className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700"
             >
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 sm:gap-4 items-start">
                 {/* Order Info */}
                 <div className="md:col-span-2">
-                  <h3 className="text-white text-lg mb-1">{order.orderNumber}</h3>
-                  <p className="text-slate-400 text-sm">
+                  <h3 className="text-white text-base sm:text-lg mb-1 break-words">{order.orderNumber}</h3>
+                  <p className="text-slate-400 text-xs sm:text-sm">
                     {order.user.firstName} {order.user.lastName}
                   </p>
-                  <p className="text-slate-500 text-sm">{order.user.email}</p>
-                  <p className="text-slate-500 text-sm mt-2">Date: {formatDate(order.createdAt)}</p>
+                  <p className="text-slate-500 text-xs sm:text-sm break-all">{order.user.email}</p>
+                  <p className="text-slate-500 text-xs sm:text-sm mt-1 sm:mt-2">Date: {formatDate(order.createdAt)}</p>
                 </div>
 
                 {/* Products */}
                 <div>
-                  <p className="text-slate-300 text-sm mb-1">Products:</p>
+                  <p className="text-slate-300 text-xs sm:text-sm mb-1">Products:</p>
                   {order.subOrders.flatMap(subOrder => subOrder.items).map((item, idx) => (
-                    <p key={idx} className="text-slate-400 text-sm">
+                    <p key={idx} className="text-slate-400 text-xs sm:text-sm break-words">
                       {item.product.title} x{item.quantity}
                     </p>
                   ))}
@@ -180,12 +180,12 @@ export function AdminOrdersPage() {
 
                 {/* Amount */}
                 <div>
-                  <p className="text-slate-300 text-sm mb-1">Total Amount:</p>
-                  <p className="text-cyan-400 text-lg">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                  <p className="text-slate-300 text-xs sm:text-sm mb-1">Total Amount:</p>
+                  <p className="text-cyan-400 text-base sm:text-lg font-semibold">${parseFloat(order.totalAmount).toFixed(2)}</p>
                 </div>
 
                 {/* Status & Actions */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <select
                     value={order.status}
                     onChange={(e) => handleStatusChange(order.id, e.target.value)}

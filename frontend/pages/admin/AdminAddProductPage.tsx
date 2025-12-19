@@ -351,63 +351,63 @@ function AdminAddProductPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-5xl">
-        <div className="flex items-center gap-4 mb-8">
+      <div className="max-w-5xl w-full">
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           <button
             onClick={() => router.push("/admin/products")}
-            className="text-slate-400 hover:text-white transition-colors bg-slate-800 p-2 rounded-lg border border-slate-700"
+            className="text-slate-400 hover:text-white transition-colors bg-slate-800 p-2 rounded-lg border border-slate-700 flex-shrink-0"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-          <div>
-            <h1 className="text-white text-3xl">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-white text-xl sm:text-2xl md:text-3xl break-words">
               {isEdit ? "Edit Product" : "Add New Product"}
             </h1>
-            <p className="text-slate-400">Fill in the product details below</p>
+            <p className="text-slate-400 text-sm sm:text-base">Fill in the product details below</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
           {/* Basic Information */}
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-            <h2 className="text-white text-xl mb-4">Basic Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+            <h2 className="text-white text-lg sm:text-xl mb-3 sm:mb-4">Basic Information</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <label className="text-slate-300 text-sm mb-2 block">Product Name *</label>
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Product Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter product name"
-                  className={`w-full px-4 py-3 bg-slate-700 border ${errors.name ? 'border-red-500' : 'border-slate-600'} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border ${errors.name ? 'border-red-500' : 'border-slate-600'} text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                 />
                 {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-2 block">Category *</label>
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Category *</label>
                 <input
                   type="text"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   placeholder="e.g., Electronics, Home & Kitchen"
-                  className={`w-full px-4 py-3 bg-slate-700 border ${errors.category ? 'border-red-500' : 'border-slate-600'} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border ${errors.category ? 'border-red-500' : 'border-slate-600'} text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                 />
                 {errors.category && <p className="text-red-400 text-xs mt-1">{errors.category}</p>}
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-2 block">Price ($) *</label>
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Price ($) *</label>
                 <input
                   type="number"
                   step="0.01"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   placeholder="0.00"
-                  className={`w-full px-4 py-3 bg-slate-700 border ${errors.price ? 'border-red-500' : 'border-slate-600'} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border ${errors.price ? 'border-red-500' : 'border-slate-600'} text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                 />
                 {errors.price && <p className="text-red-400 text-xs mt-1">{errors.price}</p>}
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-2 block">Discount (%)</label>
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Discount (%)</label>
                 <input
                   type="number"
                   value={formData.discount}
@@ -415,41 +415,41 @@ function AdminAddProductPage() {
                   placeholder="0"
                   min="0"
                   max="100"
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 />
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-2 block">HS Code *</label>
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">HS Code *</label>
                 <input
                   type="text"
                   value={formData.hsCode}
                   onChange={(e) => setFormData({ ...formData, hsCode: e.target.value })}
                   placeholder="e.g., 8471.30"
-                  className={`w-full px-4 py-3 bg-slate-700 border ${errors.hsCode ? 'border-red-500' : 'border-slate-600'} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border ${errors.hsCode ? 'border-red-500' : 'border-slate-600'} text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                 />
                 {errors.hsCode && <p className="text-red-400 text-xs mt-1">{errors.hsCode}</p>}
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-2 block">Stock Quantity</label>
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Stock Quantity</label>
                 <input
                   type="number"
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                   placeholder="0"
                   min="0"
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 />
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="text-slate-300 text-sm mb-2 block">Description *</label>
+            <div className="mt-3 sm:mt-4">
+              <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Description *</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Enter product description"
                 rows={4}
-                className={`w-full px-4 py-3 bg-slate-700 border ${errors.description ? 'border-red-500' : 'border-slate-600'} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border ${errors.description ? 'border-red-500' : 'border-slate-600'} text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-y`}
               />
               {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description}</p>}
             </div>
@@ -469,8 +469,8 @@ function AdminAddProductPage() {
           </div>
 
           {/* Images */}
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-            <h2 className="text-white text-xl mb-4">Product Images</h2>
+          <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+            <h2 className="text-white text-lg sm:text-xl mb-3 sm:mb-4">Product Images</h2>
             <input
               type="file"
               ref={fileInputRef}
@@ -481,22 +481,22 @@ function AdminAddProductPage() {
             <button
               type="button"
               onClick={handleImageAdd}
-              className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-3 rounded-lg transition-all flex items-center gap-2"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center gap-2 text-sm sm:text-base w-full sm:w-auto justify-center"
             >
-              <Upload className="w-5 h-5" />
-              Add Image
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Add Image</span>
             </button>
             {images.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="mt-3 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {images.map((img, index) => (
                   <div key={index} className="relative group">
-                    <img src={img} alt={`Product ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                    <img src={img} alt={`Product ${index + 1}`} className="w-full h-24 sm:h-32 object-cover rounded-lg" />
                     <button
                       type="button"
                       onClick={() => handleImageRemove(index)}
-                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
                 ))}
@@ -505,18 +505,18 @@ function AdminAddProductPage() {
           </div>
 
           {/* Product Type */}
-          <div className="bg-gradient-to-br from-green-900/30 to-teal-900/30 border border-green-500/30 rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Package className="w-6 h-6 text-green-400" />
-              <h2 className="text-white text-xl">Product Type</h2>
+          <div className="bg-gradient-to-br from-green-900/30 to-teal-900/30 border border-green-500/30 rounded-xl p-4 sm:p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0" />
+              <h2 className="text-white text-lg sm:text-xl">Product Type</h2>
             </div>
 
-            <div className="mb-4">
-              <label className="text-slate-300 text-sm mb-2 block">Type</label>
+            <div className="mb-3 sm:mb-4">
+              <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">Type</label>
               <select
                 value={formData.productType}
                 onChange={(e) => setFormData({ ...formData, productType: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
               >
                 <option value="internal">Internal Product (API)</option>
                 <option value="external">External Product</option>
@@ -524,14 +524,14 @@ function AdminAddProductPage() {
             </div>
 
             {formData.productType === "external" && (
-              <div className="mb-4">
-                <label className="text-slate-300 text-sm mb-2 block">External URL *</label>
+              <div className="mb-3 sm:mb-4">
+                <label className="text-slate-300 text-xs sm:text-sm mb-1.5 sm:mb-2 block">External URL *</label>
                 <input
                   type="url"
                   value={formData.externalUrl}
                   onChange={(e) => setFormData({ ...formData, externalUrl: e.target.value })}
                   placeholder="https://example.com/product"
-                  className={`w-full px-4 py-3 bg-slate-700 border ${errors.externalUrl ? 'border-red-500' : 'border-slate-600'} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border ${errors.externalUrl ? 'border-red-500' : 'border-slate-600'} text-white text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                 />
                 {errors.externalUrl && <p className="text-red-400 text-xs mt-1">{errors.externalUrl}</p>}
               </div>
@@ -557,23 +557,23 @@ function AdminAddProductPage() {
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
               type="button"
               onClick={() => router.push("/admin/products")}
-              className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all border border-slate-600"
+              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all border border-slate-600 text-sm sm:text-base w-full sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || loading}
-              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-3 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2"
+              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-2.5 sm:py-3 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isEdit ? "Updating..." : "Adding..."}
+                  <span>{isEdit ? "Updating..." : "Adding..."}</span>
                 </>
               ) : (
                 isEdit ? "Update Product" : "Add Product"

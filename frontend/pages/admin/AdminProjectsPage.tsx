@@ -169,17 +169,17 @@ export function AdminProjectsPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           <div>
-            <h1 className="text-white text-3xl mb-2">Manage Projects</h1>
-            <p className="text-slate-400">{projects.length} projects</p>
+            <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Manage Projects</h1>
+            <p className="text-slate-400 text-sm sm:text-base">{projects.length} projects</p>
           </div>
           <button
             onClick={handleAddNew}
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all flex items-center gap-2"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
-            Add New Project
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Add New Project</span>
           </button>
         </div>
 

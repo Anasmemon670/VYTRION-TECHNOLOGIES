@@ -179,9 +179,9 @@ export function AdminContactMessagesPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="mb-8">
-          <h1 className="text-white text-3xl mb-2">Contact Messages</h1>
-          <p className="text-slate-400">
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Contact Messages</h1>
+          <p className="text-slate-400 text-sm sm:text-base">
             {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All messages read'}
           </p>
         </div>

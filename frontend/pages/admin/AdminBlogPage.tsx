@@ -159,17 +159,17 @@ export function AdminBlogPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           <div>
-            <h1 className="text-white text-3xl mb-2">Manage Blog</h1>
-            <p className="text-slate-400">{blogs.length} blog posts</p>
+            <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Manage Blog</h1>
+            <p className="text-slate-400 text-sm sm:text-base">{blogs.length} blog posts</p>
           </div>
           <button
             onClick={handleAddNew}
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all flex items-center gap-2"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
-            Add New Post
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Add New Post</span>
           </button>
         </div>
 
@@ -185,12 +185,12 @@ export function AdminBlogPage() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {blogs.map((blog, index) => (
-            <motion.div key={blog.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-slate-800 rounded-xl p-4 lg:p-6 border border-slate-700">
-              <div className="flex items-start gap-3 lg:gap-4">
+            <motion.div key={blog.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-slate-800 rounded-xl p-3 sm:p-4 lg:p-6 border border-slate-700">
+              <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
                 {/* Blog Image */}
-                <div className="w-24 h-24 lg:w-32 lg:h-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-700">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-700">
                   <ImageWithFallback
                     src={blog.featuredImage || undefined}
                     alt={blog.title}
@@ -200,7 +200,7 @@ export function AdminBlogPage() {
 
                 {/* Blog Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-white text-lg lg:text-xl mb-1 lg:mb-2 line-clamp-2">{blog.title}</h3>
+                  <h3 className="text-white text-base sm:text-lg lg:text-xl mb-1 lg:mb-2 line-clamp-2 break-words">{blog.title}</h3>
                   
                   {/* Excerpt or Content Preview */}
                   {(blog.excerpt || blog.content) && (

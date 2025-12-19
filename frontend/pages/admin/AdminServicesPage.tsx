@@ -154,17 +154,17 @@ export function AdminServicesPage() {
   return (
     <AdminLayout>
       <div>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           <div>
-            <h1 className="text-white text-3xl mb-2">Manage Services</h1>
-            <p className="text-slate-400">{services.length} services</p>
+            <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Manage Services</h1>
+            <p className="text-slate-400 text-sm sm:text-base">{services.length} services</p>
           </div>
           <button
             onClick={handleAddNew}
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all flex items-center gap-2"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
-            Add New Service
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Add New Service</span>
           </button>
         </div>
 
@@ -183,20 +183,20 @@ export function AdminServicesPage() {
             <p className="text-slate-400">No services yet. Create your first service!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
             {services.map((service, index) => {
               const Icon = service.iconName ? iconMap[service.iconName] || Cpu : Cpu;
               const features = service.features && Array.isArray(service.features) ? service.features : [];
               
               return (
-                <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-6 h-6 text-white" />
+                <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                  <div className="flex items-center gap-3 sm:gap-4 mb-3">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h3 className="text-white text-xl">{service.title}</h3>
+                    <h3 className="text-white text-lg sm:text-xl break-words">{service.title}</h3>
                   </div>
-                  <p className="text-slate-400 mb-4">{service.description}</p>
+                  <p className="text-slate-400 mb-3 sm:mb-4 text-sm sm:text-base line-clamp-3">{service.description}</p>
 
                   {/* Features */}
                   {features.length > 0 && (
