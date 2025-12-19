@@ -13,6 +13,14 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
+  const getUserDisplayName = () => {
+    if (!user) return "Admin";
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user.email || user.phone || "Admin";
+  };
+
   const handleLogout = () => {
     logout();
     router.push("/login");
@@ -53,7 +61,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-white text-xs sm:text-sm">{user?.name || "Admin"}</p>
+                <p className="text-white text-xs sm:text-sm">{getUserDisplayName()}</p>
                 <p className="text-slate-400 text-xs">{user?.email}</p>
               </div>
             </div>

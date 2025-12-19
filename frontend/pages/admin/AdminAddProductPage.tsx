@@ -586,5 +586,4 @@ export function AdminAddProductPage() {
   );
 }
 
-export default AdminAddProductPage;
-export { AdminAddProductPage };
+export default AdminAddProductPage;export { AdminAddProductPage };

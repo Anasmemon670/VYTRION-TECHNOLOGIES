@@ -7,8 +7,23 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
-import { productsAPI } from "@/lib/api";
+import { productsAPI, messagesAPI } from "@/lib/api";
 import logoImage from "../assets/77ac9b30465e2a638fe36d43d6692e10b6bf92e1.png";
+
+interface Message {
+  id: string;
+  sender: string;
+  subject: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
 
 const pages = [
   { name: "Products", path: "/products" },
@@ -52,6 +67,7 @@ export function Header() {
   const totalCartItems = getTotalItems();
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Search products via API
   useEffect(() => {
@@ -101,9 +117,27 @@ export function Header() {
     router.push("/login");
   };
 
-  const markAsRead = (id: number) => {
-    setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, unread: false } : msg));
-  };
+  // Fetch messages when user is logged in
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!user) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        const response = await messagesAPI.getAll({ limit: 50 });
+        setMessages(response.messages || []);
+      } catch (err) {
+        console.error('Error fetching messages:', err);
+        setMessages([]);
+      }
+    };
+
+    fetchMessages();
+  }, [user]);
+
+  const unreadCount = messages.filter(msg => !msg.isRead).length;
 
   return (
     <header className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 sticky top-0 z-50 shadow-lg">
