@@ -503,7 +503,7 @@ export function Header() {
                 {/* Mobile Messages Link */}
                 <button
                   onClick={() => {
-                    setIsMessagesOpen(true); // Ideally open a mobile-friendly view, but standard dropdown works or navigate to /messages
+                    router.push("/messages");
                     setIsMobileMenuOpen(false);
                   }}
                   className="px-3 py-2 text-white hover:bg-slate-800 hover:text-cyan-400 transition-colors rounded flex items-center justify-between"
