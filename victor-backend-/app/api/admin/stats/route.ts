@@ -179,9 +179,12 @@ export async function GET(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get admin stats error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while fetching stats'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

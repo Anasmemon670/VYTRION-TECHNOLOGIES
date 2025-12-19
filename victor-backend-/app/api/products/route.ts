@@ -86,14 +86,14 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get products error:', error)
     console.error('Error stack:', error.stack)
-    return NextResponse.json(
+    return addCorsHeaders(NextResponse.json(
       { 
         error: 'Internal server error', 
         details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred',
         ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
       },
       { status: 500 }
-    )
+    ))
   }
 }
 

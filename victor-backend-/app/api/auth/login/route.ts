@@ -16,22 +16,38 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      const response = NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
+    }
+    
     const { email, phone, password } = body
 
     // Validation
     if (!password) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Password is required' },
         { status: 400 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     if (!email && !phone) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Either email or phone is required' },
         { status: 400 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Find user by email or phone
@@ -41,10 +57,12 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       console.error('Login failed: User not found', { email, phone })
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Verify password
@@ -52,10 +70,12 @@ export async function POST(request: NextRequest) {
 
     if (!isPasswordValid) {
       console.error('Login failed: Invalid password', { userId: user.id, email: user.email })
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Generate tokens
@@ -100,10 +120,15 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    const response = NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred during login'
+      },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 

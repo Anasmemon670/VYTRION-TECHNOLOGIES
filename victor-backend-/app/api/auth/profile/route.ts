@@ -23,13 +23,27 @@ export async function PUT(request: NextRequest) {
     const currentUser = await getCurrentUser(token)
 
     if (!currentUser) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      const response = NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
+    }
+    
     const { firstName, lastName, email, phone, marketingOptIn, profilePicture } = body
 
     // Build update data object
@@ -49,10 +63,12 @@ export async function PUT(request: NextRequest) {
           where: { email },
         })
         if (existingUser && existingUser.id !== currentUser.id) {
-          return NextResponse.json(
+          const response = NextResponse.json(
             { error: 'Email already in use' },
             { status: 409 }
           )
+          response.headers.set('Access-Control-Allow-Origin', '*')
+          return response
         }
         updateData.email = email
       }
@@ -67,10 +83,12 @@ export async function PUT(request: NextRequest) {
           where: { phone },
         })
         if (existingUser && existingUser.id !== currentUser.id) {
-          return NextResponse.json(
+          const response = NextResponse.json(
             { error: 'Phone already in use' },
             { status: 409 }
           )
+          response.headers.set('Access-Control-Allow-Origin', '*')
+          return response
         }
         updateData.phone = phone
       }
@@ -113,10 +131,27 @@ export async function PUT(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Update profile error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    
+    // Handle Prisma unique constraint errors
+    if (error.code === 'P2002') {
+      const field = error.meta?.target?.[0] || 'field'
+      const response = NextResponse.json(
+        { error: `${field.charAt(0).toUpperCase() + field.slice(1)} already in use` },
+        { status: 409 }
+      )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
+    }
+    
+    const response = NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while updating profile'
+      },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 

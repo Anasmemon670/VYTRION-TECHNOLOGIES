@@ -67,18 +67,18 @@ export async function GET(
     })
 
     if (!order) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
-      )
+      ))
     }
 
     // Users can only see their own orders unless admin
     if (!user.isAdmin && order.userId !== user.id) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
-      )
+      ))
     }
 
     const response = NextResponse.json(
@@ -105,10 +105,13 @@ export async function GET(
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get order error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -123,7 +126,17 @@ export async function PUT(
 
     const user = authCheck.user!
     const resolvedParams = params instanceof Promise ? await params : params
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = updateOrderSchema.parse(body)
 
     const order = await prisma.order.findUnique({
@@ -131,31 +144,31 @@ export async function PUT(
     })
 
     if (!order) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
-      )
+      ))
     }
 
     // Only admin can update status, or user can cancel their own pending order
     if (!user.isAdmin) {
       if (order.userId !== user.id) {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           { error: 'Access denied' },
           { status: 403 }
-        )
+        ))
       }
       if (data.status && data.status !== 'CANCELLED') {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           { error: 'Only admins can update order status' },
           { status: 403 }
-        )
+        ))
       }
       if (order.status !== 'PENDING') {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           { error: 'Can only cancel pending orders' },
           { status: 400 }
-        )
+        ))
       }
     }
 
@@ -243,10 +256,10 @@ export async function PUT(
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Update order error:', error)
@@ -254,13 +267,13 @@ export async function PUT(
     console.error('Error code:', error?.code)
     console.error('Error message:', error?.message)
     
-    return NextResponse.json(
+    return addCorsHeaders(NextResponse.json(
       { 
         error: 'Internal server error', 
         details: process.env.NODE_ENV === 'development' ? error?.message : 'Failed to update order',
         code: error?.code,
       },
       { status: 500 }
-    )
+    ))
   }
 }

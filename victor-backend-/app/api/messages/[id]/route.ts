@@ -44,18 +44,18 @@ export async function GET(
     })
 
     if (!message) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Message not found' },
         { status: 404 }
-      )
+      ))
     }
 
     // Users can only see their own messages unless they're admin
     if (!authCheck.user!.isAdmin && message.userId !== authCheck.user!.id) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
-      )
+      ))
     }
 
     const response = NextResponse.json(
@@ -66,10 +66,13 @@ export async function GET(
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get message error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -83,7 +86,17 @@ export async function PUT(
     if (authCheck.error) return authCheck.error
 
     const resolvedParams = params instanceof Promise ? await params : params
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = updateUserMessageSchema.parse(body)
 
     // Check if message exists and belongs to user (or user is admin)
@@ -92,17 +105,17 @@ export async function PUT(
     })
 
     if (!existingMessage) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Message not found' },
         { status: 404 }
-      )
+      ))
     }
 
     if (!authCheck.user!.isAdmin && existingMessage.userId !== authCheck.user!.id) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
-      )
+      ))
     }
 
     const message = await prisma.userMessage.update({
@@ -133,24 +146,27 @@ export async function PUT(
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     if (error.code === 'P2025') {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Message not found' },
         { status: 404 }
-      )
+      ))
     }
 
     console.error('Update message error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -176,16 +192,19 @@ export async function DELETE(
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error.code === 'P2025') {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Message not found' },
         { status: 404 }
-      )
+      ))
     }
 
     console.error('Delete message error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

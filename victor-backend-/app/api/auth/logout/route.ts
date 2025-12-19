@@ -23,10 +23,12 @@ export async function POST(request: NextRequest) {
     const currentUser = await getCurrentUser(token)
 
     if (!currentUser) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Clear refresh token from database
@@ -50,10 +52,15 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Logout error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    const response = NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 

@@ -82,6 +82,9 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
 }
 
 export async function retrieveCheckoutSession(sessionId: string) {
+  if (!process.env.STRIPE_SECRET_KEY || !stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.')
+  }
   return await stripe.checkout.sessions.retrieve(sessionId)
 }
 
@@ -89,11 +92,15 @@ export async function verifyWebhookSignature(
   payload: string | Buffer,
   signature: string
 ): Promise<Stripe.Event> {
+  if (!process.env.STRIPE_SECRET_KEY || !stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.')
+  }
+  
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
   if (!webhookSecret) {
     throw new Error('STRIPE_WEBHOOK_SECRET is not set')
   }
 
-  return stripe.webhooks.constructEvent(payload, signature, webhookSecret)
+  return await stripe.webhooks.constructEvent(payload, signature, webhookSecret)
 }

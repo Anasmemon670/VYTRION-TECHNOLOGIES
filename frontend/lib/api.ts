@@ -1,8 +1,14 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+/**
+ * IMPORTANT:
+ * Frontend ENV (Vercel):
+ * NEXT_PUBLIC_API_URL = https://victor-backend-.vercel.app/api
+ */
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
 
-// Create axios instance
+// Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -10,10 +16,11 @@ const api: AxiosInstance = axios.create({
   },
 })
 
-// Request interceptor to add token
+// =======================
+// REQUEST INTERCEPTOR
+// =======================
 api.interceptors.request.use(
   (config) => {
-    // Only access localStorage on client side
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken')
       if (token) {
@@ -22,58 +29,43 @@ api.interceptors.request.use(
     }
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
-// Response interceptor to handle token refresh
+// =======================
+// RESPONSE INTERCEPTOR
+// =======================
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    // Only handle token refresh on client side
     if (typeof window === 'undefined') {
       return Promise.reject(error)
     }
 
-    const originalRequest = error.config as any
+    const originalRequest: any = error.config
 
-    // If error is 401 and we haven't already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
         const refreshToken = localStorage.getItem('refreshToken')
-        if (!refreshToken) {
-          // No refresh token, logout user
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          localStorage.removeItem('user')
-          window.location.href = '/login'
-          return Promise.reject(error)
-        }
+        if (!refreshToken) throw new Error('No refresh token')
 
-        // Try to refresh token
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
           refreshToken,
         })
 
-        const { token, refreshToken: newRefreshToken } = response.data
+        const { token, refreshToken: newRefreshToken } = res.data
 
-        // Update tokens
         localStorage.setItem('accessToken', token)
         localStorage.setItem('refreshToken', newRefreshToken)
 
-        // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${token}`
         return api(originalRequest)
-      } catch (refreshError) {
-        // Refresh failed, logout user
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
+      } catch {
+        localStorage.clear()
         window.location.href = '/login'
-        return Promise.reject(refreshError)
+        return Promise.reject(error)
       }
     }
 
@@ -81,531 +73,150 @@ api.interceptors.response.use(
   }
 )
 
-// Auth API functions
+// =======================
+// AUTH API
+// =======================
 export const authAPI = {
-  register: async (data: {
-    firstName: string
-    lastName: string
-    email?: string
-    phone?: string
-    password: string
-    termsAccepted: boolean
-    marketingOptIn?: boolean
-  }) => {
-    try {
-      const response = await api.post('/auth/register', data)
-      return response.data
-    } catch (error: any) {
-      // Log detailed error for debugging
-      console.error('Registration API error:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url
-      })
-      throw error
-    }
-  },
-
-  login: async (email?: string, phone?: string, password: string = '') => {
-    try {
-      const response = await api.post('/auth/login', { email, phone, password })
-      return response.data
-    } catch (error: any) {
-      console.error('Login API error:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url
-      })
-      throw error
-    }
-  },
-
-  logout: async () => {
-    const response = await api.post('/auth/logout')
-    return response.data
-  },
-
-  getProfile: async () => {
-    const response = await api.get('/auth/me')
-    return response.data
-  },
-
-  updateProfile: async (data: {
-    firstName?: string
-    lastName?: string
-    email?: string
-    phone?: string
-    profilePicture?: string | null
-    marketingOptIn?: boolean
-  }) => {
-    const response = await api.put('/auth/profile', data)
-    return response.data
-  },
-
-  forgotPassword: async (email?: string, phone?: string) => {
-    const response = await api.post('/auth/forgot-password', { email, phone })
-    return response.data
-  },
-
-  resetPassword: async (resetToken: string, newPassword: string) => {
-    const response = await api.post('/auth/reset-password', {
-      resetToken,
-      newPassword,
-    })
-    return response.data
-  },
-
-  refreshToken: async (refreshToken: string) => {
-    const response = await api.post('/auth/refresh', { refreshToken })
-    return response.data
-  },
+  register: (data: any) => api.post('/auth/register', data).then(r => r.data),
+  login: (data: any) => api.post('/auth/login', data).then(r => r.data),
+  logout: () => api.post('/auth/logout').then(r => r.data),
+  getProfile: () => api.get('/auth/me').then(r => r.data),
+  updateProfile: (data: any) => api.put('/auth/profile', data).then(r => r.data),
+  forgotPassword: (data: any) => api.post('/auth/forgot-password', data).then(r => r.data),
+  resetPassword: (data: any) => api.post('/auth/reset-password', data).then(r => r.data),
 }
 
-// Products API functions
-export const productsAPI = {
-  getAll: async (params?: {
-    page?: number
-    limit?: number
-    category?: string
-    search?: string
-    featured?: boolean
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.category) queryParams.append('category', params.category)
-    if (params?.search) queryParams.append('search', params.search)
-    if (params?.featured) queryParams.append('featured', 'true')
-
-    const response = await api.get(`/products?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/products/${id}`)
-    return response.data
-  },
-
-  create: async (data: {
-    title: string
-    description?: string
-    price: number
-    discount?: number
-    hsCode: string
-    category?: string
-    stock?: number
-    images?: string[]
-    featured?: boolean
-    slug?: string
-  }) => {
-    const response = await api.post('/products', data)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    title?: string
-    description?: string
-    price?: number
-    discount?: number
-    hsCode?: string
-    category?: string
-    stock?: number
-    images?: string[]
-    featured?: boolean
-    slug?: string
-  }) => {
-    const response = await api.put(`/products/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id: string) => {
-    const response = await api.delete(`/products/${id}`)
-    return response.data
-  },
-}
-
-// Orders API functions
-export const ordersAPI = {
-  getAll: async (params?: { page?: number; limit?: number }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-
-    const response = await api.get(`/orders?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/orders/${id}`)
-    return response.data
-  },
-
-  create: async (data: {
-    userId?: string // Admin can specify userId
-    items: Array<{ productId: string; quantity: number }>
-    shippingAddress: {
-      fullName: string
-      address: string
-      city: string
-      zipCode: string
-      country: string
-      phone?: string
-    }
-    billingAddress: {
-      fullName: string
-      address: string
-      city: string
-      zipCode: string
-      country: string
-      phone?: string
-    }
-  }) => {
-    const response = await api.post('/orders', data)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    status?: 'PENDING' | 'PROCESSED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
-    trackingNumber?: string
-    subOrderId?: string
-  }) => {
-    const response = await api.put(`/orders/${id}`, data)
-    return response.data
-  },
-}
-
-// Blog API functions
-export const blogAPI = {
-  getAll: async (params?: {
-    page?: number
-    limit?: number
-    published?: boolean
-    search?: string
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.published !== undefined) queryParams.append('published', params.published.toString())
-    if (params?.search) queryParams.append('search', params.search)
-
-    const response = await api.get(`/blog?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/blog/${id}`)
-    return response.data
-  },
-
-  create: async (data: {
-    title: string
-    slug?: string
-    excerpt?: string
-    content: string
-    featuredImage?: string | null
-    published?: boolean
-  }) => {
-    const response = await api.post('/blog', data)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    title?: string
-    slug?: string
-    excerpt?: string | null
-    content?: string
-    featuredImage?: string | null
-    published?: boolean
-  }) => {
-    const response = await api.put(`/blog/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id: string) => {
-    const response = await api.delete(`/blog/${id}`)
-    return response.data
-  },
-}
-
-// Checkout API functions
-export const checkoutAPI = {
-  createSession: async (orderId: string) => {
-    const response = await api.post('/checkout', { orderId })
-    return response.data
-  },
-}
-
-// Admin API functions
+// =======================
+// ADMIN API
+// =======================
 export const adminAPI = {
-  getStats: async (params?: { startDate?: string; endDate?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.startDate) queryParams.append('startDate', params.startDate)
-    if (params?.endDate) queryParams.append('endDate', params.endDate)
-
-    const response = await api.get(`/admin/stats?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getAllUsers: async (params?: { page?: number; limit?: number }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-
-    const response = await api.get(`/auth/admin/users?${queryParams.toString()}`)
-    return response.data
-  },
+  getStats: (params?: any) =>
+    api.get('/admin/stats', { params }).then(r => r.data),
 }
 
-// Returns API functions
-export const returnsAPI = {
-  getAll: async (params?: { page?: number; limit?: number; status?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.status) queryParams.append('status', params.status)
-
-    const response = await api.get(`/returns/request?${queryParams.toString()}`)
-    return response.data
-  },
-
-  create: async (data: {
-    orderId: string
-    reason: string
-    images?: string[]
-  }) => {
-    const response = await api.post('/returns/request', data)
-    return response.data
-  },
-
-  update: async (returnId: string, status: 'PENDING' | 'APPROVED' | 'REJECTED') => {
-    const response = await api.put('/returns/request', { returnId, status })
-    return response.data
-  },
+// =======================
+// PRODUCTS API
+// =======================
+export const productsAPI = {
+  getAll: (params?: any) =>
+    api.get('/products', { params }).then(r => r.data),
+  getById: (id: string) =>
+    api.get(`/products/${id}`).then(r => r.data),
+  create: (data: any) =>
+    api.post('/products', data).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/products/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/products/${id}`).then(r => r.data),
 }
 
-// Projects API functions
-export const projectsAPI = {
-  getAll: async (params?: {
-    page?: number
-    limit?: number
-    status?: string
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.status) queryParams.append('status', params.status)
-
-    const response = await api.get(`/projects?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/projects/${id}`)
-    return response.data
-  },
-
-  create: async (data: {
-    title: string
-    description?: string
-    client?: string
-    year?: string
-    status?: 'Completed' | 'In Progress'
-    images?: string[]
-    features?: string[]
-  }) => {
-    const response = await api.post('/projects', data)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    title?: string
-    description?: string | null
-    client?: string | null
-    year?: string | null
-    status?: 'Completed' | 'In Progress'
-    images?: string[] | null
-    features?: string[] | null
-  }) => {
-    const response = await api.put(`/projects/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id: string) => {
-    const response = await api.delete(`/projects/${id}`)
-    return response.data
-  },
+// =======================
+// ORDERS API
+// =======================
+export const ordersAPI = {
+  getAll: (params?: any) =>
+    api.get('/orders', { params }).then(r => r.data),
+  getById: (id: string) =>
+    api.get(`/orders/${id}`).then(r => r.data),
+  create: (data: any) =>
+    api.post('/orders', data).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/orders/${id}`, data).then(r => r.data),
 }
 
-// Services API functions
+// =======================
+// CHECKOUT API
+// =======================
+export const checkoutAPI = {
+  createSession: (orderId: string) =>
+    api.post('/checkout', { orderId }).then(r => r.data),
+}
+
+// =======================
+// BLOG API
+// =======================
+export const blogAPI = {
+  getAll: (params?: any) =>
+    api.get('/blog', { params }).then(r => r.data),
+  getById: (id: string) =>
+    api.get(`/blog/${id}`).then(r => r.data),
+  create: (data: any) =>
+    api.post('/blog', data).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/blog/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/blog/${id}`).then(r => r.data),
+}
+
+// =======================
+// SERVICES API
+// =======================
 export const servicesAPI = {
-  getAll: async (params?: {
-    page?: number
-    limit?: number
-    active?: boolean
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.active !== undefined) queryParams.append('active', params.active.toString())
-
-    const response = await api.get(`/services?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/services/${id}`)
-    return response.data
-  },
-
-  create: async (data: {
-    title: string
-    description: string
-    iconName?: string
-    features?: string[]
-    price?: string | null
-    duration?: string | null
-    active?: boolean
-  }) => {
-    const response = await api.post('/services', data)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    title?: string
-    description?: string
-    iconName?: string | null
-    features?: string[] | null
-    price?: string | null
-    duration?: string | null
-    active?: boolean
-  }) => {
-    const response = await api.put(`/services/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id: string) => {
-    const response = await api.delete(`/services/${id}`)
-    return response.data
-  },
+  getAll: (params?: any) =>
+    api.get('/services', { params }).then(r => r.data),
+  getById: (id: string) =>
+    api.get(`/services/${id}`).then(r => r.data),
+  create: (data: any) =>
+    api.post('/services', data).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/services/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/services/${id}`).then(r => r.data),
 }
 
-// Contact Messages API functions
+// =======================
+// PROJECTS API
+// =======================
+export const projectsAPI = {
+  getAll: (params?: any) =>
+    api.get('/projects', { params }).then(r => r.data),
+  getById: (id: string) =>
+    api.get(`/projects/${id}`).then(r => r.data),
+  create: (data: any) =>
+    api.post('/projects', data).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/projects/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/projects/${id}`).then(r => r.data),
+}
+
+// =======================
+// CONTACT API
+// =======================
 export const contactAPI = {
-  create: async (data: {
-    name: string
-    email: string
-    subject?: string
-    message: string
-  }) => {
-    const response = await api.post('/contact', data)
-    return response.data
-  },
-
-  getAll: async (params?: {
-    page?: number
-    limit?: number
-    archived?: boolean
-    isRead?: boolean
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.archived !== undefined) queryParams.append('archived', params.archived.toString())
-    if (params?.isRead !== undefined) queryParams.append('isRead', params.isRead.toString())
-
-    const response = await api.get(`/contact?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/contact/${id}`)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    isRead?: boolean
-    archived?: boolean
-  }) => {
-    const response = await api.put(`/contact/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id: string) => {
-    const response = await api.delete(`/contact/${id}`)
-    return response.data
-  },
-
-  reply: async (id: string, data: {
-    subject: string
-    message: string
-  }) => {
-    const response = await api.post(`/contact/${id}/reply`, data)
-    return response.data
-  },
+  create: (data: any) =>
+    api.post('/contact', data).then(r => r.data),
+  getAll: (params?: any) =>
+    api.get('/contact', { params }).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/contact/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/contact/${id}`).then(r => r.data),
+  reply: (id: string, data: any) =>
+    api.post(`/contact/${id}/reply`, data).then(r => r.data),
 }
 
-// User Messages API functions
+// =======================
+// MESSAGES API
+// =======================
 export const messagesAPI = {
-  getAll: async (params?: {
-    page?: number
-    limit?: number
-    isRead?: boolean
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.isRead !== undefined) queryParams.append('isRead', params.isRead.toString())
-
-    const response = await api.get(`/messages?${queryParams.toString()}`)
-    return response.data
-  },
-
-  getById: async (id: string) => {
-    const response = await api.get(`/messages/${id}`)
-    return response.data
-  },
-
-  create: async (data: {
-    userId: string
-    sender: string
-    subject: string
-    message: string
-  }) => {
-    const response = await api.post('/messages', data)
-    return response.data
-  },
-
-  update: async (id: string, data: {
-    isRead?: boolean
-  }) => {
-    const response = await api.put(`/messages/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id: string) => {
-    const response = await api.delete(`/messages/${id}`)
-    return response.data
-  },
+  getAll: (params?: any) =>
+    api.get('/messages', { params }).then(r => r.data),
+  create: (data: any) =>
+    api.post('/messages', data).then(r => r.data),
+  update: (id: string, data: any) =>
+    api.put(`/messages/${id}`, data).then(r => r.data),
 }
 
-// Wishlist API functions
+// =======================
+// WISHLIST API
+// =======================
 export const wishlistAPI = {
-  getAll: async () => {
-    const response = await api.get('/wishlist')
-    return response.data
-  },
-
-  add: async (productId: string) => {
-    const response = await api.post('/wishlist', { productId })
-    return response.data
-  },
-
-  remove: async (productId: string) => {
-    const response = await api.delete(`/wishlist/${productId}`)
-    return response.data
-  },
+  getAll: () => api.get('/wishlist').then(r => r.data),
+  add: (productId: string) =>
+    api.post('/wishlist', { productId }).then(r => r.data),
+  remove: (productId: string) =>
+    api.delete(`/wishlist/${productId}`).then(r => r.data),
 }
 
 export default api

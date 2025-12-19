@@ -27,7 +27,17 @@ export async function POST(request: NextRequest) {
     if (authCheck.error) return authCheck.error
 
     const user = authCheck.user!
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = checkoutSchema.parse(body)
 
     // Get order
@@ -36,36 +46,36 @@ export async function POST(request: NextRequest) {
     })
 
     if (!order) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
-      )
+      ))
     }
 
     // Verify order belongs to user
     if (order.userId !== user.id) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
-      )
+      ))
     }
 
     // Check if order is already paid
     if (order.status !== 'PENDING' || order.stripeSessionId) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Order already processed' },
         { status: 400 }
-      )
+      ))
     }
 
     // Validate order amount
     const orderAmount = Number(order.totalAmount)
     if (!orderAmount || orderAmount <= 0 || isNaN(orderAmount)) {
       console.error('Invalid order amount:', order.totalAmount)
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Invalid order amount' },
         { status: 400 }
-      )
+      ))
     }
 
     // Get app URL from environment
@@ -75,10 +85,10 @@ export async function POST(request: NextRequest) {
     const currency = (order.currency || 'USD').toLowerCase()
     if (!currency || currency.length !== 3) {
       console.error('Invalid currency:', order.currency)
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Invalid currency' },
         { status: 400 }
-      )
+      ))
     }
 
     // Check if Stripe is configured before attempting to create session
@@ -127,10 +137,10 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       console.error('Checkout validation error:', error.errors)
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Checkout error:', error)

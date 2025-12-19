@@ -1,9 +1,11 @@
 "use client";
 
 import { motion } from "motion/react";
-import { MessageSquare, Mail, Search, Loader2 } from "lucide-react";
+import { MessageSquare, Mail, Search, Loader2, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { messagesAPI } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 interface Message {
     id: string;
@@ -21,11 +23,14 @@ interface Message {
 }
 
 export default function MessagesPage() {
+    const { user } = useAuth();
     const [messages, setMessages] = useState<Message[]>([]);
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [replyText, setReplyText] = useState("");
+    const [sending, setSending] = useState(false);
 
     useEffect(() => {
         const fetchMessages = async () => {
@@ -52,6 +57,7 @@ export default function MessagesPage() {
 
     const handleMessageClick = async (msg: Message) => {
         setSelectedMessage(msg);
+        setReplyText(""); // Clear reply text when selecting a message
         // Mark as read if not already read
         if (!msg.isRead) {
             try {
@@ -60,6 +66,51 @@ export default function MessagesPage() {
             } catch (err) {
                 console.error('Error marking message as read:', err);
             }
+        }
+    };
+
+    const handleSendReply = async () => {
+        if (!replyText.trim()) {
+            toast.error("Please enter a message");
+            return;
+        }
+
+        if (!user) {
+            toast.error("Please log in to send messages");
+            return;
+        }
+
+        try {
+            setSending(true);
+            const subject = selectedMessage 
+                ? `Re: ${selectedMessage.subject}` 
+                : "New Message";
+            
+            const response = await messagesAPI.create({
+                subject: subject,
+                message: replyText.trim(),
+            });
+
+            if (response.userMessage) {
+                // Refresh messages to get updated list
+                const refreshResponse = await messagesAPI.getAll({ limit: 50 });
+                setMessages(refreshResponse.messages || []);
+                setReplyText("");
+                toast.success("Message sent successfully!");
+                
+                // Select the newly sent message if possible
+                const newMessage = refreshResponse.messages?.find(m => m.id === response.userMessage.id);
+                if (newMessage) {
+                    setSelectedMessage(newMessage);
+                }
+            } else {
+                toast.error("Failed to send message");
+            }
+        } catch (err: any) {
+            console.error('Error sending message:', err);
+            toast.error(err.response?.data?.error || "Failed to send message");
+        } finally {
+            setSending(false);
         }
     };
 
@@ -213,12 +264,36 @@ export default function MessagesPage() {
                                     <div className="flex gap-4">
                                         <textarea
                                             placeholder="Type a reply..."
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                                    e.preventDefault();
+                                                    handleSendReply();
+                                                }
+                                            }}
                                             className="flex-1 bg-slate-800 text-white rounded-xl p-4 border border-slate-700 focus:outline-none focus:border-cyan-500 transition-colors resize-none h-24"
-                                        ></textarea>
-                                        <button className="self-end bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                            Send
+                                            disabled={sending}
+                                        />
+                                        <button 
+                                            onClick={handleSendReply}
+                                            disabled={sending || !replyText.trim()}
+                                            className="self-end bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                                        >
+                                            {sending ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Sending...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="w-4 h-4" />
+                                                    Send
+                                                </>
+                                            )}
                                         </button>
                                     </div>
+                                    <p className="text-xs text-slate-500 mt-2">Press Ctrl+Enter or Cmd+Enter to send</p>
                                 </div>
                             </>
                         ) : (

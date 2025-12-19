@@ -259,13 +259,24 @@ export function ProductsPage() {
                   )}
                 </div>
 
-                {/* Add to Cart Button */}
-                <button
-                  onClick={(e) => handleAddToCart(e, product)}
-                  className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-2 rounded-lg transition-all transform group-hover:scale-105"
-                >
-                  Add to Cart
-                </button>
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/product/${product.slug || product.id}`);
+                    }}
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-all transform group-hover:scale-105 text-sm font-medium"
+                  >
+                    Buy Now
+                  </button>
+                  <button
+                    onClick={(e) => handleAddToCart(e, product)}
+                    className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white py-2 rounded-lg transition-all transform group-hover:scale-105 text-sm font-medium"
+                  >
+                    Add to Cart
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}

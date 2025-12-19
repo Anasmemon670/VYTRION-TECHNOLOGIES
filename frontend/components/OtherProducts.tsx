@@ -206,6 +206,19 @@ export function OtherProducts() {
                               <p className="text-slate-500 text-xs mt-1">Stock: {product.stock}</p>
                             )}
                           </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/product/${product.slug || product.id}`);
+                            }}
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition-all transform hover:scale-105 text-sm font-medium"
+                          >
+                            Buy Now
+                          </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -219,7 +232,7 @@ export function OtherProducts() {
                                 duration: 2000,
                               });
                             }}
-                            className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg transition-all transform hover:scale-105"
+                            className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white py-2 rounded-lg transition-all transform hover:scale-105 text-sm font-medium"
                           >
                             Add to Cart
                           </button>

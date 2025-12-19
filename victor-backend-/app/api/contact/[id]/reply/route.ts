@@ -32,7 +32,17 @@ export async function POST(
     const adminCheck = await requireAdmin(request)
     if (adminCheck.error) return adminCheck.error
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = replyContactMessageSchema.parse(body)
 
     // Get the contact message
@@ -41,43 +51,42 @@ export async function POST(
     })
 
     if (!contactMessage) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Contact message not found' },
         { status: 404 }
-      )
+      ))
     }
 
-    // Find user by email
+    // Find user by email (optional - contact messages can come from non-registered users)
     const user = await prisma.user.findUnique({
       where: { email: contactMessage.email },
     })
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found with this email. The user must be registered to receive messages.' },
-        { status: 404 }
-      )
-    }
+    let userMessage = null
 
-    // Create UserMessage for the user
-    const userMessage = await prisma.userMessage.create({
-      data: {
-        userId: user.id,
-        sender: 'Admin',
-        subject: data.subject,
-        message: data.message,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+    if (user) {
+      // If user exists, create UserMessage for them
+      userMessage = await prisma.userMessage.create({
+        data: {
+          userId: user.id,
+          sender: 'Admin',
+          subject: data.subject,
+          message: data.message,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-      },
-    })
+      })
+    }
+    // Note: If user doesn't exist, we still mark the contact message as read
+    // In a production system, you would send an email notification here
 
     // Mark contact message as read
     await prisma.contactMessage.update({
@@ -87,8 +96,11 @@ export async function POST(
 
     const response = NextResponse.json(
       {
-        message: 'Reply sent successfully',
+        message: user 
+          ? 'Reply sent successfully. The user will see it in their messages.'
+          : 'Reply recorded. Note: User is not registered, so they will not see this in their account. Consider sending an email notification.',
         userMessage,
+        userFound: !!user,
       },
       { status: 201 }
     )
@@ -96,23 +108,26 @@ export async function POST(
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     if (error.code === 'P2025') {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Contact message not found' },
         { status: 404 }
-      )
+      ))
     }
 
     console.error('Reply to contact message error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while sending the reply'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

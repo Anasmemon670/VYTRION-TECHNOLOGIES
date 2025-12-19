@@ -199,7 +199,7 @@ export function BlogPage() {
                 {/* Post Image */}
                 <div className="h-48 overflow-hidden relative bg-slate-800">
                   <ImageWithFallback
-                    src={post.featuredImage || ''}
+                    src={post.featuredImage || undefined}
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />

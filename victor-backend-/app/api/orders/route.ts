@@ -118,16 +118,16 @@ export async function GET(request: NextRequest) {
     
     // Check for Prisma schema mismatch errors
     if (error.code === 'P2021' || error.message?.includes('does not exist')) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { 
           error: 'Database schema mismatch. Please run: pnpm prisma migrate dev && pnpm prisma generate',
           details: error.message 
         },
         { status: 500 }
-      )
+      ))
     }
     
-    return NextResponse.json(
+    return addCorsHeaders(NextResponse.json(
       { 
         error: 'Internal server error', 
         details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred',
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
         })
       },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -148,7 +148,17 @@ export async function POST(request: NextRequest) {
     if (authCheck.error) return authCheck.error
 
     const currentUser = authCheck.user!
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = createOrderSchema.parse(body)
 
     // Determine target user: admin can create orders for other users
@@ -159,17 +169,17 @@ export async function POST(request: NextRequest) {
         where: { id: data.userId },
       })
       if (!targetUser) {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           { error: 'Target user not found' },
           { status: 404 }
-        )
+        ))
       }
       targetUserId = data.userId
     } else if (data.userId && !currentUser.isAdmin) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Only admins can create orders for other users' },
         { status: 403 }
-      )
+      ))
     }
 
     // Validate products and check stock
@@ -179,26 +189,26 @@ export async function POST(request: NextRequest) {
     })
 
     if (products.length !== productIds.length) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'One or more products not found' },
         { status: 404 }
-      )
+      ))
     }
 
     // Check stock availability
     for (const item of data.items) {
       const product = products.find((p) => p.id === item.productId)
       if (!product) {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           { error: `Product ${item.productId} not found` },
           { status: 404 }
-        )
+        ))
       }
       if (product.stock < item.quantity) {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           { error: `Insufficient stock for product: ${product.title}` },
           { status: 400 }
-        )
+        ))
       }
     }
 
@@ -297,17 +307,20 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       console.error('Order validation error:', error.errors)
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Create order error:', error)
     console.error('Error stack:', error.stack)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while creating the order'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

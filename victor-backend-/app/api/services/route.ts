@@ -73,10 +73,13 @@ export async function GET(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get services error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -86,7 +89,17 @@ export async function POST(request: NextRequest) {
     const adminCheck = await requireAdmin(request)
     if (adminCheck.error) return adminCheck.error
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = serviceSchema.parse(body)
 
     const service = await prisma.service.create({
@@ -115,16 +128,19 @@ export async function POST(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Create service error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while creating the service'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

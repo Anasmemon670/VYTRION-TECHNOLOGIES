@@ -90,74 +90,145 @@ export async function GET(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get messages error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
-// POST /api/messages - Create user message (Admin only - for sending messages to users)
+// POST /api/messages - Create user message (Admin can send to users, Users can send to admins)
 export async function POST(request: NextRequest) {
   try {
-    const adminCheck = await requireAdmin(request)
-    if (adminCheck.error) return adminCheck.error
+    const authCheck = await requireAuth(request)
+    if (authCheck.error) return authCheck.error
 
-    const body = await request.json()
-    const data = userMessageSchema.parse(body)
-
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: data.userId },
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+    const user = authCheck.user!
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
     }
+    
+    // If admin, use the full schema (can specify userId)
+    // If regular user, they can only send messages to admins (no userId needed)
+    if (user.isAdmin) {
+      const data = userMessageSchema.parse(body)
 
-    const message = await prisma.userMessage.create({
-      data: {
-        userId: data.userId,
-        sender: data.sender,
-        subject: data.subject,
-        message: data.message,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+      // Verify user exists
+      const targetUser = await prisma.user.findUnique({
+        where: { id: data.userId },
+      })
+
+      if (!targetUser) {
+        return addCorsHeaders(NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        ))
+      }
+
+      const message = await prisma.userMessage.create({
+        data: {
+          userId: data.userId,
+          sender: data.sender,
+          subject: data.subject,
+          message: data.message,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    const response = NextResponse.json(
-      {
-        message: 'User message created successfully',
-        userMessage: message,
-      },
-      { status: 201 }
-    )
+      const response = NextResponse.json(
+        {
+          message: 'User message created successfully',
+          userMessage: message,
+        },
+        { status: 201 }
+      )
 
-    return addCorsHeaders(response)
+      return addCorsHeaders(response)
+    } else {
+      // Regular user sending message to admins
+      const { subject, message: messageText } = body
+
+      if (!subject || !subject.trim()) {
+        return addCorsHeaders(NextResponse.json(
+          { error: 'Subject is required' },
+          { status: 400 }
+        ))
+      }
+
+      if (!messageText || !messageText.trim()) {
+        return addCorsHeaders(NextResponse.json(
+          { error: 'Message is required' },
+          { status: 400 }
+        ))
+      }
+
+      // Create message with user's name as sender
+      const senderName = `${user.firstName} ${user.lastName}`.trim() || user.email || 'User'
+      
+      const message = await prisma.userMessage.create({
+        data: {
+          userId: user.id,
+          sender: senderName,
+          subject: subject.trim(),
+          message: messageText.trim(),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      })
+
+      const response = NextResponse.json(
+        {
+          message: 'Message sent successfully',
+          userMessage: message,
+        },
+        { status: 201 }
+      )
+
+      return addCorsHeaders(response)
+    }
+
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Create user message error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while sending the message'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

@@ -4,10 +4,38 @@ import logoImage from "../assets/77ac9b30465e2a638fe36d43d6692e10b6bf92e1.png";
 
 export function Footer() {
   const socialLinks = [
-    { icon: Twitter, href: "https://twitter.com", label: "Twitter", bg: "bg-slate-700" },
-    { icon: MessageSquare, href: "https://discord.com", label: "Discord", bg: "bg-slate-700" },
-    { icon: Linkedin, href: "https://linkedin.com", label: "LinkedIn", bg: "bg-slate-700" },
-    { icon: Facebook, href: "https://facebook.com", label: "Facebook", bg: "bg-slate-700" },
+    { 
+      icon: Twitter, 
+      href: "https://twitter.com", 
+      label: "Twitter", 
+      bg: "bg-slate-800",
+      hoverBg: "hover:bg-[#1DA1F2]",
+      iconColor: "text-white"
+    },
+    { 
+      icon: MessageSquare, 
+      href: "https://discord.com", 
+      label: "Discord", 
+      bg: "bg-slate-800",
+      hoverBg: "hover:bg-[#5865F2]",
+      iconColor: "text-white"
+    },
+    { 
+      icon: Linkedin, 
+      href: "https://linkedin.com", 
+      label: "LinkedIn", 
+      bg: "bg-slate-800",
+      hoverBg: "hover:bg-[#0077B5]",
+      iconColor: "text-white"
+    },
+    { 
+      icon: Facebook, 
+      href: "https://facebook.com", 
+      label: "Facebook", 
+      bg: "bg-slate-800",
+      hoverBg: "hover:bg-[#1877F2]",
+      iconColor: "text-white"
+    },
   ];
 
   const companyLinks = [
@@ -28,15 +56,17 @@ export function Footer() {
               Your trusted company where we bring together the latest technology, the best offers and the most innovative solutions. Our mission is to keep you updated every day to bring you a smarter, more accessible and opportunity-filled future.
             </p>
             {/* Social Links */}
-            <div className="flex gap-2 sm:gap-3">
+            <div className="flex gap-3 sm:gap-4">
               {socialLinks.map((social) => (
                 <a
                   key={social.label}
                   href={social.href}
-                  className={`${social.bg} hover:bg-slate-600 p-2.5 sm:p-3 rounded-lg transition-all transform hover:scale-110`}
+                  className={`${social.bg} ${social.hoverBg} p-3 sm:p-3.5 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg border border-slate-700 hover:border-transparent group`}
                   aria-label={social.label}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <social.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <social.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${social.iconColor} group-hover:scale-110 transition-transform duration-300`} strokeWidth={2} />
                 </a>
               ))}
             </div>

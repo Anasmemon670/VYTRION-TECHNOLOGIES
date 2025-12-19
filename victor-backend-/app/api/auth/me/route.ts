@@ -22,10 +22,12 @@ export async function GET(request: NextRequest) {
     const user = await getCurrentUser(token)
 
     if (!user) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     const response = NextResponse.json(
@@ -43,10 +45,15 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Get user error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    const response = NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 

@@ -16,21 +16,37 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      const response = NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
+    }
+    
     const { resetToken, newPassword } = body
 
     if (!resetToken) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Reset token is required' },
         { status: 400 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     if (!newPassword || newPassword.length < 6) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Password must be at least 6 characters long' },
         { status: 400 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Find user by reset token
@@ -44,10 +60,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Invalid or expired reset token' },
         { status: 400 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Hash new password
@@ -78,10 +96,15 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Reset password error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    const response = NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 

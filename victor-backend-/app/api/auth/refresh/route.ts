@@ -16,23 +16,39 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      const response = NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
+    }
+    
     const { refreshToken } = body
 
     if (!refreshToken) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Refresh token is required' },
         { status: 400 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Verify refresh token
     const decoded = verifyRefreshToken(refreshToken)
     if (!decoded) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Invalid or expired refresh token' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Check if refresh token exists in database
@@ -41,10 +57,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user || user.refreshToken !== refreshToken) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Invalid refresh token' },
         { status: 401 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
 
     // Generate new tokens
@@ -74,10 +92,15 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Refresh token error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    const response = NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred during token refresh'
+      },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 

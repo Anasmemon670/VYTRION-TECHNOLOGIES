@@ -39,13 +39,23 @@ export async function POST(request: NextRequest) {
     })
 
     if (!rateLimitResult.allowed) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
         { status: 429 }
-      )
+      ))
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = contactMessageSchema.parse(body)
 
     const message = await prisma.contactMessage.create({
@@ -68,17 +78,20 @@ export async function POST(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Create contact message error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while submitting the contact message'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -135,9 +148,12 @@ export async function GET(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get contact messages error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }

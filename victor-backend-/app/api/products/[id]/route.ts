@@ -67,10 +67,13 @@ export async function GET(
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get product error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -91,13 +94,23 @@ export async function PUT(
     })
 
     if (!product) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
-      )
+      ))
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      ))
+    }
+    
     const data = updateProductSchema.parse(body)
 
     // Handle slug generation if title is updated
@@ -142,17 +155,20 @@ export async function PUT(
     return addCorsHeaders(response)
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
-      )
+      ))
     }
 
     console.error('Update product error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+    return addCorsHeaders(NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+      },
       { status: 500 }
-    )
+    ))
   }
 }
 
@@ -185,10 +201,10 @@ export async function DELETE(
     })
 
     if (!product) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
-      )
+      ))
     }
 
     await prisma.product.delete({
@@ -211,22 +227,22 @@ export async function DELETE(
     
     // Handle foreign key constraint error
     if (error.code === 'P2003') {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Cannot delete product. It is associated with existing orders. Please remove all order items first.' },
         { status: 400 }
-      )
+      ))
     }
     
     // Handle record not found
     if (error.code === 'P2025') {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
-      )
+      ))
     }
     
     // Return detailed error in development, generic in production
-    return NextResponse.json(
+    return addCorsHeaders(NextResponse.json(
       { 
         error: 'Internal server error', 
         details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while deleting the product',
@@ -236,6 +252,6 @@ export async function DELETE(
         })
       },
       { status: 500 }
-    )
+    ))
   }
 }

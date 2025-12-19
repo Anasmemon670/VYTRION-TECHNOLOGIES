@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await authAPI.login(email, undefined, password);
+      const response = await authAPI.login({ email, password });
       
       if (response.user && response.token && response.refreshToken) {
         // Store tokens

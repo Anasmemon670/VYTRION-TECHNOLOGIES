@@ -168,23 +168,34 @@ export function BigOffers() {
                       )}
                     </div>
 
-                    {/* Add to Cart Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart({
-                          id: product.id,
-                          name: product.title,
-                          price: price,
-                          originalPrice: originalPrice,
-                          image: images[0] || '/images/products/headphones.png'
-                        });
-                      }}
-                      className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 rounded-lg transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-cyan-500/50"
-                    >
-                      Add to Cart
-                      <span>+</span>
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/product/${product.slug || product.id}`);
+                        }}
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg transition-all text-sm font-medium"
+                      >
+                        Buy Now
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart({
+                            id: product.id,
+                            name: product.title,
+                            price: price,
+                            originalPrice: originalPrice,
+                            image: images[0] || '/images/products/headphones.png'
+                          });
+                        }}
+                        className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white py-2.5 rounded-lg transition-all flex items-center justify-center gap-1 text-sm font-medium"
+                      >
+                        Add to Cart
+                        <span>+</span>
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               );
