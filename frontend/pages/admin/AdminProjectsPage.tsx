@@ -227,7 +227,7 @@ export function AdminProjectsPage() {
                   <div className="flex flex-wrap items-center gap-2 lg:gap-4 text-xs lg:text-sm text-slate-500">
                     <span>Client: {project.client}</span>
                     <span className="hidden lg:inline">•</span>
-                    <span>{project.year || project.date}</span>
+                    <span>{project.year}</span>
                   </div>
                   {/* Features */}
                   {project.features && Array.isArray(project.features) && project.features.length > 0 && (
@@ -374,7 +374,7 @@ export function AdminProjectsPage() {
               />
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as "Completed" | "In Progress" })}
                 className="bg-slate-700 text-white px-3 lg:px-4 py-2 lg:py-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm lg:text-base"
               >
                 <option value="Completed">Completed</option>

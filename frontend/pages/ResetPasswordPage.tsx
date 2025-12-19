@@ -21,9 +21,11 @@ export function ResetPasswordPage() {
 
   useEffect(() => {
     // Get token from URL params if available
-    const token = searchParams.get("token");
-    if (token) {
-      setResetToken(token);
+    if (searchParams) {
+      const token = searchParams.get("token");
+      if (token) {
+        setResetToken(token);
+      }
     }
   }, [searchParams]);
 

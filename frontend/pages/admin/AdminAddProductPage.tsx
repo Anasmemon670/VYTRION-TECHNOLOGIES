@@ -21,7 +21,7 @@ interface Product {
   image: string;
 }
 
-export function AdminAddProductPage() {
+function AdminAddProductPage() {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;
@@ -586,4 +586,5 @@ export function AdminAddProductPage() {
   );
 }
 
-export default AdminAddProductPage;export { AdminAddProductPage };
+export default AdminAddProductPage;
+export { AdminAddProductPage };

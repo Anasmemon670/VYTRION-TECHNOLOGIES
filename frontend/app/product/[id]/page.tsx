@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductDetailPage } from "@/pages/ProductDetailPage";
+import ProductDetailPage from "@/pages/ProductDetailPage";
 
 export default function ProductDetailPageRoute() {
     return <ProductDetailPage />;

@@ -590,4 +590,22 @@ export const messagesAPI = {
   },
 }
 
+// Wishlist API functions
+export const wishlistAPI = {
+  getAll: async () => {
+    const response = await api.get('/wishlist')
+    return response.data
+  },
+
+  add: async (productId: string) => {
+    const response = await api.post('/wishlist', { productId })
+    return response.data
+  },
+
+  remove: async (productId: string) => {
+    const response = await api.delete(`/wishlist/${productId}`)
+    return response.data
+  },
+}
+
 export default api
