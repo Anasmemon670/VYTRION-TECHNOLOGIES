@@ -139,6 +139,10 @@ export function Header() {
 
   const unreadCount = messages.filter(msg => !msg.isRead).length;
 
+  const markAsRead = (id: string) => {
+    setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, isRead: true } : msg));
+  };
+
   return (
     <header className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 sticky top-0 z-50 shadow-lg">
       <div className="container mx-auto px-4 py-4">
