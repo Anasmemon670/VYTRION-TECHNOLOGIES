@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
           lowStockProducts,
           revenueByMonth: Object.entries(revenueByMonth).map(([month, revenue]) => ({
             month,
-            revenue: revenue.toString(),
+            revenue: (revenue as number).toString(),
           })),
         },
       },

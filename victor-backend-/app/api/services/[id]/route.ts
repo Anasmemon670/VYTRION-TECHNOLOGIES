@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, addCorsHeaders } from '@/lib/utils'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 const updateServiceSchema = z.object({
   title: z.string().min(1).optional(),
@@ -86,7 +87,9 @@ export async function PUT(
         ...(data.title && { title: data.title }),
         ...(data.description && { description: data.description }),
         ...(data.iconName !== undefined && { iconName: data.iconName }),
-        ...(data.features !== undefined && { features: data.features }),
+        ...(data.features !== undefined && { 
+          features: data.features === null ? Prisma.JsonNull : data.features 
+        }),
         ...(data.price !== undefined && { price: data.price }),
         ...(data.duration !== undefined && { duration: data.duration }),
         ...(data.active !== undefined && { active: data.active }),

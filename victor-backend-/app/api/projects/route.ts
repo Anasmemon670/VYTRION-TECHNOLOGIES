@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, addCorsHeaders } from '@/lib/utils'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 const projectSchema = z.object({
   title: z.string().min(1),
@@ -92,8 +93,8 @@ export async function POST(request: NextRequest) {
         client: data.client || null,
         year: data.year || null,
         status: data.status,
-        images: data.images || null,
-        features: data.features || null,
+        images: data.images || Prisma.JsonNull,
+        features: data.features || Prisma.JsonNull,
       },
     })
 

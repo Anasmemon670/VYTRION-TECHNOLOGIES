@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, addCorsHeaders } from '@/lib/utils'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 const updateProjectSchema = z.object({
   title: z.string().min(1).optional(),
@@ -89,8 +90,12 @@ export async function PUT(
         ...(data.client !== undefined && { client: data.client }),
         ...(data.year !== undefined && { year: data.year }),
         ...(data.status && { status: data.status }),
-        ...(data.images !== undefined && { images: data.images }),
-        ...(data.features !== undefined && { features: data.features }),
+        ...(data.images !== undefined && { 
+          images: data.images === null ? Prisma.JsonNull : data.images 
+        }),
+        ...(data.features !== undefined && { 
+          features: data.features === null ? Prisma.JsonNull : data.features 
+        }),
       },
     })
 

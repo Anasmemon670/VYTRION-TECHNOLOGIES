@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, addCorsHeaders } from '@/lib/utils'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 const serviceSchema = z.object({
   title: z.string().min(1),
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
         title: data.title,
         description: data.description,
         iconName: data.iconName || null,
-        features: data.features || null,
+        features: data.features || Prisma.JsonNull,
         price: data.price || null,
         duration: data.duration || null,
         active: data.active,

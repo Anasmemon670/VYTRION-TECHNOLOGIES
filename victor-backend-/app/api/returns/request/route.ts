@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       data: {
         orderId: data.orderId,
         reason: data.reason,
-        images: data.images || null,
+        images: data.images || undefined,
         status: 'PENDING',
       },
       include: {
