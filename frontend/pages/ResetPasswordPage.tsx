@@ -54,7 +54,7 @@ export function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const response = await authAPI.resetPassword(resetToken, newPassword);
+      const response = await authAPI.resetPassword({ resetToken, newPassword });
       
       if (response.message) {
         setSuccess(true);

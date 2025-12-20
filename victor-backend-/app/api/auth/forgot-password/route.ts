@@ -15,12 +15,15 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🔵 FORGOT PASSWORD: Request received')
   try {
+    // Parse JSON body
     let body
     try {
       body = await request.json()
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
+      console.log('🔵 FORGOT PASSWORD: Body parsed successfully')
+    } catch (parseError: any) {
+      console.error('❌ JSON parsing error:', parseError)
       const response = NextResponse.json(
         { error: 'Invalid JSON in request body' },
         { status: 400 }
@@ -29,36 +32,67 @@ export async function POST(request: NextRequest) {
       return response
     }
     
-    const { email, phone } = body
+    const { email } = body
+    console.log('🔵 FORGOT PASSWORD: Email received:', email ? 'yes' : 'no')
 
-    if (!email && !phone) {
+    // Validate email
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return NextResponse.json(
+        { error: 'Email is required' },
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+    }
+
+    // Trim and normalize email
+    const trimmedEmail = email.trim().toLowerCase()
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(trimmedEmail)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+    }
+
+    // Find user by email
+    console.log('🔵 FORGOT PASSWORD: Searching for user with email:', trimmedEmail)
+    const user = await prisma.user.findUnique({
+      where: { email: trimmedEmail },
+    })
+    console.log('🔵 FORGOT PASSWORD: User found:', user ? 'yes' : 'no')
+
+    // For security, don't reveal if user exists or not
+    if (!user) {
+      console.log('🔵 FORGOT PASSWORD: User not found, returning success message')
       const response = NextResponse.json(
-        { error: 'Either email or phone is required' },
-        { status: 400 }
+        { message: 'If a user exists with this email, a password reset link has been sent.' },
+        { status: 200 }
       )
       response.headers.set('Access-Control-Allow-Origin', '*')
       return response
     }
 
-    // Find user by email or phone
-    const user = await prisma.user.findUnique({
-      where: email ? { email } : { phone },
-    })
-
-    // For security, don't reveal if user exists or not
-    if (!user) {
-      return NextResponse.json(
-        { message: 'If a user exists with this email/phone, a password reset link has been sent.' },
-        { status: 200 }
-      )
-    }
-
     // Generate reset token
+    console.log('🔵 FORGOT PASSWORD: Generating reset token')
     const resetToken = generateResetToken()
     const resetTokenExpiry = new Date()
     resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1) // Token expires in 1 hour
 
     // Save reset token to database
+    console.log('🔵 FORGOT PASSWORD: Saving reset token to database')
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -66,14 +100,16 @@ export async function POST(request: NextRequest) {
         resetTokenExpiry,
       },
     })
+    console.log('🔵 FORGOT PASSWORD: Reset token saved successfully')
 
-    // In production, send email/SMS with reset token
+    // In production, send email with reset token
     // For now, we'll return it (remove this in production!)
-    console.log('Reset token for', email || phone, ':', resetToken)
+    console.log('🔵 FORGOT PASSWORD: Reset token for', trimmedEmail, ':', resetToken)
+    console.log('🔵 FORGOT PASSWORD: Request completed successfully')
 
     const response = NextResponse.json(
       {
-        message: 'If a user exists with this email/phone, a password reset link has been sent.',
+        message: 'If a user exists with this email, a password reset link has been sent.',
         // Remove this in production - only for development
         resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined,
       },
@@ -87,11 +123,14 @@ export async function POST(request: NextRequest) {
     
     return response
   } catch (error: any) {
-    console.error('Forgot password error:', error)
+    console.error('❌ FORGOT PASSWORD ERROR:', error)
+    console.error('❌ Error message:', error?.message)
+    console.error('❌ Error stack:', error?.stack)
+    
     const response = NextResponse.json(
       { 
-        error: 'Internal server error', 
-        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error?.message : 'An error occurred'
       },
       { status: 500 }
     )

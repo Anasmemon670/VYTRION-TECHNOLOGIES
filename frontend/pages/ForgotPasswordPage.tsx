@@ -28,19 +28,88 @@ export function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
-      const response = await authAPI.forgotPassword(email);
+      console.log('📤 Sending forgot password request to:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
+      const response = await authAPI.forgotPassword({ email: email.trim() });
+      console.log('✅ Forgot password response:', response);
       
-      if (response.message) {
+      if (response && response.message) {
         setSuccess(true);
         // In development, show the reset token
         if (response.resetToken) {
           setResetToken(response.resetToken);
         }
+      } else if (response && response.error) {
+        setError(response.error);
       } else {
         setError("Failed to send reset email. Please try again.");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to send reset email. Please try again.");
+      console.error('Forgot password error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error response data:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      // Extract error message from various possible locations
+      let errorMessage = "Failed to send reset email. Please try again.";
+      
+      // Check if response exists and has data
+      if (err.response?.data) {
+        const data = err.response.data;
+        
+        // Check if response data is HTML (Next.js error page)
+        if (typeof data === 'string' && data.includes('<!DOCTYPE html>')) {
+          errorMessage = "Server error occurred. Please check if the backend server is running.";
+          console.error('Received HTML error page instead of JSON');
+        } 
+        // Check if data is already an object (JSON)
+        else if (typeof data === 'object' && data !== null) {
+          // Prioritize error field, then details, then message
+          if (data.error) {
+            errorMessage = data.error;
+            // Append details if available (especially in development)
+            if (data.details) {
+              errorMessage += data.details !== data.error ? `: ${data.details}` : '';
+            }
+          } else if (data.details) {
+            errorMessage = data.details;
+          } else if (data.message) {
+            errorMessage = data.message;
+          }
+        }
+        // If data is a string, try to parse it
+        else if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              errorMessage = parsed.error;
+              if (parsed.details) {
+                errorMessage += `: ${parsed.details}`;
+              }
+            } else if (parsed.details) {
+              errorMessage = parsed.details;
+            } else if (parsed.message) {
+              errorMessage = parsed.message;
+            }
+          } catch {
+            // If parsing fails, use the string as error message
+            errorMessage = data;
+          }
+        }
+      } 
+      // If no response, check for network errors
+      else if (err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
+        errorMessage = `Cannot connect to backend server at ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}. Please ensure the backend server is running.`;
+        console.error('❌ Network error - Backend server might not be running');
+      } else if (!err.response) {
+        errorMessage = `Network error: ${err.message || 'Unable to reach backend server'}`;
+        console.error('❌ No response received from backend');
+      } 
+      // Fallback to error message
+      else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -4,7 +4,9 @@ import { rateLimit, getClientIdentifier } from './lib/rateLimit'
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
-  'https://vytrion-commerce.vercel.app/', // 👈 yahan apna real frontend URL
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'https://vytrion-commerce.vercel.app',
 ]
 
 export function middleware(request: NextRequest) {
@@ -60,9 +62,22 @@ export function middleware(request: NextRequest) {
 }
 
 function setSecurityHeaders(response: NextResponse, origin: string) {
-  // ✅ CORS (SAFE)
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    response.headers.set('Access-Control-Allow-Origin', origin)
+  // ✅ CORS - Allow all origins in development, specific origins in production
+  const isDevelopment = process.env.NODE_ENV === 'development'
+  
+  if (isDevelopment) {
+    // In development, allow all origins
+    response.headers.set('Access-Control-Allow-Origin', origin || '*')
+  } else {
+    // In production, check if origin is in allowed list
+    const normalizedOrigin = origin.replace(/\/$/, '') // Remove trailing slash
+    const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => 
+      normalizedOrigin === allowed.replace(/\/$/, '') || normalizedOrigin.includes(allowed.replace(/\/$/, ''))
+    )
+    
+    if (isAllowedOrigin) {
+      response.headers.set('Access-Control-Allow-Origin', origin)
+    }
   }
 
   response.headers.set(
