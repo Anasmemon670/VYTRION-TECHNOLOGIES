@@ -45,7 +45,7 @@ export function AdminProductsPage() {
         }
         const response = await productsAPI.getAll(params);
         setProducts(response.products || []);
-        
+
         // Extract unique categories
         const uniqueCategories = new Set<string>(["All"]);
         response.products?.forEach((p: Product) => {
@@ -158,8 +158,8 @@ export function AdminProductsPage() {
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-4 py-2 rounded-lg transition-all ${selectedCategory === cat
-                    ? "bg-cyan-500 text-white"
-                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  ? "bg-cyan-500 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                   }`}
               >
                 {cat}
@@ -194,59 +194,77 @@ export function AdminProductsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="bg-slate-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-slate-700"
+              className="bg-[#0f172a] rounded-2xl overflow-hidden border border-slate-700 shadow-xl hover:shadow-2xl transition-all"
             >
+              {/* IMAGE */}
               <div className="relative">
-                {product.images && Array.isArray(product.images) && product.images[0] ? (
+                {product.images?.[0] ? (
                   <img
                     src={product.images[0]}
                     alt={product.title}
-                    className="w-full h-40 sm:h-48 object-cover"
+                    className="w-full h-56 object-cover"
                   />
                 ) : (
-                  <div className="w-full h-40 sm:h-48 bg-slate-700 flex items-center justify-center">
-                    <span className="text-slate-500 text-sm">No Image</span>
+                  <div className="w-full h-56 bg-slate-700 flex items-center justify-center text-slate-400">
+                    No Image
                   </div>
                 )}
-                {product.featured && (
-                  <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-cyan-500 text-white text-xs px-2 sm:px-3 py-1 rounded-full">
-                    Featured
-                  </span>
-                )}
+
+                {/* DISCOUNT */}
                 {product.discount && product.discount > 0 && (
-                  <span className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-500 text-white text-xs px-2 sm:px-3 py-1 rounded-full">
+                  <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
                     {product.discount}% OFF
                   </span>
                 )}
-              </div>
-              <div className="p-4 sm:p-5">
-                <h3 className="text-white text-base sm:text-lg mb-1 break-words line-clamp-2">{product.title}</h3>
-                {product.description && (
-                  <p className="text-slate-400 text-xs sm:text-sm mb-2 line-clamp-2">{product.description}</p>
-                )}
-                <div className="flex items-center justify-between mb-2 sm:mb-3 flex-wrap gap-1">
-                  <p className="text-cyan-400 text-sm sm:text-base font-semibold">${parseFloat(product.price).toFixed(2)}</p>
-                  {product.category && (
-                    <p className="text-slate-500 text-xs sm:text-sm">{product.category}</p>
-                  )}
-                </div>
-                <p className="text-slate-500 text-xs sm:text-sm mb-3">Stock: {product.stock}</p>
 
-                <div className="flex gap-2">
+                {/* FEATURED */}
+                {product.featured && (
+                  <span className="absolute top-3 right-3 bg-cyan-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    Featured
+                  </span>
+                )}
+              </div>
+
+              {/* CONTENT */}
+              <div className="p-4">
+                <h3 className="text-white text-lg font-semibold mb-1 line-clamp-1">
+                  {product.title}
+                </h3>
+
+                <p className="text-slate-400 text-sm mb-2 line-clamp-2">
+                  {product.description}
+                </p>
+
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-cyan-400 text-lg font-bold">
+                    ${parseFloat(product.price).toFixed(2)}
+                  </p>
+                  <span className="text-slate-400 text-sm">
+                    {product.category}
+                  </span>
+                </div>
+
+                <p className="text-slate-500 text-sm mb-4">
+                  Stock: {product.stock}
+                </p>
+
+                {/* BUTTONS */}
+                <div className="flex gap-3">
                   <button
                     onClick={() => handleEdit(product.id)}
-                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2"
                   >
-                    <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span>Edit</span>
+                    <Edit size={18} />
+                    Edit
                   </button>
+
                   <button
                     onClick={() => handleDeleteClick(product)}
                     disabled={deleting}
-                    className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
+                    className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-slate-600 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2"
                   >
-                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span>Delete</span>
+                    <Trash2 size={18} />
+                    Delete
                   </button>
                 </div>
               </div>
