@@ -189,7 +189,7 @@ export function OtherOffers() {
                         <div className="p-4 sm:p-6 flex flex-col flex-grow">
                           <div className="flex items-center justify-between mb-2">
                             {offer.discount && offer.discount > 0 && (
-                              <span className="bg-cyan-500 text-white text-xs sm:text-sm px-2.5 sm:px-3 py-1 rounded-full inline-block">
+                              <span className="bg-cyan-500 text-white text-xs sm:text-sm px-3 sm:px-4 py-1 rounded-full inline-block whitespace-nowrap">
                                 {offer.discount}% OFF
                               </span>
                             )}
