@@ -170,15 +170,26 @@ export function BigOffers() {
 
                     {/* Action Buttons */}
                     <div className="flex gap-2">
+                      {/* BUY NOW */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/product/${product.slug || product.id}`);
                         }}
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg transition-all text-sm font-medium"
+                        className="
+                            flex-1
+                            bg-green-500 hover:bg-green-600
+                            text-white
+                            py-3
+                            rounded-xl
+                            ransition-colors
+                            text-sm
+                            font-semibold "
                       >
                         Buy Now
                       </button>
+
+                      {/* ADD TO CART */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -190,12 +201,24 @@ export function BigOffers() {
                             image: images[0] || '/images/products/headphones.png'
                           });
                         }}
-                        className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white py-2.5 rounded-lg transition-all flex items-center justify-center gap-1 text-sm font-medium"
+                        className="
+                            flex-1
+                            bg-cyan-500 hover:bg-cyan-600
+                            text-white
+                            py-3
+                            rounded-xl
+                            transition-colors
+                            flex items-center justify-center gap-1
+                            text-sm
+                            font-semibold
+                          "
                       >
                         Add to Cart
-                        <span>+</span>
+                        <span className="text-base leading-none">+</span>
                       </button>
                     </div>
+
+
                   </div>
                 </motion.div>
               );

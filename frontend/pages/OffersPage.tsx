@@ -217,7 +217,7 @@ export function OffersPage() {
                             e.stopPropagation();
                             router.push(`/product/${product.slug || product.id}`);
                           }}
-                          className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg transition-all text-sm font-medium"
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg transition-all text-sm font-medium"
                         >
                           Buy Now
                         </button>
@@ -232,7 +232,7 @@ export function OffersPage() {
                               image: images[0] || '/images/products/headphones.png'
                             });
                           }}
-                          className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white py-2.5 rounded-lg transition-all flex items-center justify-center gap-1 text-sm font-medium"
+                          className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white py-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm font-medium"
                         >
                           Add to Cart
                           <span>+</span>

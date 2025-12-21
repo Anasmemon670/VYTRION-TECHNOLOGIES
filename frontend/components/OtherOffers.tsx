@@ -10,6 +10,7 @@ import { productsAPI } from "@/lib/api";
 export function OtherOffers() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [cardsPerView, setCardsPerView] = useState(1);
   const router = useRouter();
 
   const [offers, setOffers] = useState<any[]>([]);
@@ -52,13 +53,44 @@ export function OtherOffers() {
     };
   }, []);
 
+  // Calculate how many cards are visible at once based on screen size
+  useEffect(() => {
+    const updateCardsPerView = () => {
+      if (typeof window === 'undefined') return;
+      if (window.innerWidth >= 1024) {
+        setCardsPerView(3); // lg: 3 cards
+      } else if (window.innerWidth >= 768) {
+        setCardsPerView(2); // md: 2 cards
+      } else {
+        setCardsPerView(1); // sm: 1 card
+      }
+    };
+
+    updateCardsPerView();
+    window.addEventListener('resize', updateCardsPerView);
+    return () => window.removeEventListener('resize', updateCardsPerView);
+  }, []);
+
+  // Reset slide when cardsPerView changes
+  useEffect(() => {
+    const maxSlide = Math.max(0, offers.length - cardsPerView);
+    if (currentSlide > maxSlide) {
+      setCurrentSlide(maxSlide);
+    }
+  }, [cardsPerView, offers.length, currentSlide]);
+
+  const maxSlide = Math.max(0, offers.length - cardsPerView);
+
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % Math.max(1, offers.length));
+    setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + Math.max(1, offers.length)) % Math.max(1, offers.length));
+    setCurrentSlide((prev) => Math.max(prev - 1, 0));
   };
+
+  const canGoLeft = currentSlide > 0;
+  const canGoRight = currentSlide < maxSlide;
 
   if (offers.length === 0 && !loading) {
     return null; // Don't show section if no offers
@@ -97,24 +129,28 @@ export function OtherOffers() {
         {/* Carousel */}
         <div className="relative">
           {/* Navigation Buttons */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-slate-50 transition-all hidden md:block"
-          >
-            <ChevronLeft className="w-6 h-6 text-slate-700" />
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-slate-50 transition-all hidden md:block"
-          >
-            <ChevronRight className="w-6 h-6 text-slate-700" />
-          </button>
+          {canGoLeft && (
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-slate-50 transition-all hidden md:block"
+            >
+              <ChevronLeft className="w-6 h-6 text-slate-700" />
+            </button>
+          )}
+          {canGoRight && (
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-slate-50 transition-all hidden md:block"
+            >
+              <ChevronRight className="w-6 h-6 text-slate-700" />
+            </button>
+          )}
 
           {/* Carousel Items */}
           <div className="overflow-hidden">
             <motion.div
               className="flex gap-6"
-              animate={{ x: `-${currentSlide * (100 / 3)}%` }}
+              animate={{ x: `-${currentSlide * (100 / cardsPerView)}%` }}
               transition={{ duration: 0.5 }}
             >
               {loading ? (
@@ -136,9 +172,12 @@ export function OtherOffers() {
                       transition={{ duration: 0.6, delay: index * 0.1 }}
                       className="flex-shrink-0 w-full md:w-1/2 lg:w-1/3"
                     >
-                      <div className="bg-slate-50 rounded-xl overflow-hidden hover:shadow-xl transition-all cursor-pointer group border border-slate-200 hover:border-cyan-500">
+                      <div 
+                        onClick={() => router.push(`/product/${offer.slug || offer.id}`)}
+                        className="bg-slate-50 rounded-xl overflow-hidden hover:shadow-xl transition-all cursor-pointer group border border-slate-200 hover:border-cyan-500 h-full flex flex-col"
+                      >
                         {/* Image */}
-                        <div className="h-40 sm:h-48 overflow-hidden">
+                        <div className="h-48 sm:h-56 overflow-hidden flex-shrink-0">
                           <ImageWithFallback
                             src={images[0] || '/images/products/headphones.png'}
                             alt={offer.title}
@@ -147,7 +186,7 @@ export function OtherOffers() {
                         </div>
 
                         {/* Content */}
-                        <div className="p-4 sm:p-6">
+                        <div className="p-4 sm:p-6 flex flex-col flex-grow">
                           <div className="flex items-center justify-between mb-2">
                             {offer.discount && offer.discount > 0 && (
                               <span className="bg-cyan-500 text-white text-xs sm:text-sm px-2.5 sm:px-3 py-1 rounded-full inline-block">
@@ -160,7 +199,7 @@ export function OtherOffers() {
                           </div>
                           <h3 className="text-slate-900 text-lg sm:text-xl mb-2">{offer.title}</h3>
                           {offer.description && (
-                            <p className="text-slate-600 text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-2">
+                            <p className="text-slate-600 text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-2 flex-grow">
                               {offer.description}
                             </p>
                           )}
@@ -190,18 +229,22 @@ export function OtherOffers() {
 
           {/* Mobile Navigation */}
           <div className="flex md:hidden justify-center gap-4 mt-6">
-            <button
-              onClick={prevSlide}
-              className="bg-white shadow-lg rounded-full p-2 hover:bg-slate-50 transition-all"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-700" />
-            </button>
-            <button
-              onClick={nextSlide}
-              className="bg-white shadow-lg rounded-full p-2 hover:bg-slate-50 transition-all"
-            >
-              <ChevronRight className="w-5 h-5 text-slate-700" />
-            </button>
+            {canGoLeft && (
+              <button
+                onClick={prevSlide}
+                className="bg-white shadow-lg rounded-full p-2 hover:bg-slate-50 transition-all"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-700" />
+              </button>
+            )}
+            {canGoRight && (
+              <button
+                onClick={nextSlide}
+                className="bg-white shadow-lg rounded-full p-2 hover:bg-slate-50 transition-all"
+              >
+                <ChevronRight className="w-5 h-5 text-slate-700" />
+              </button>
+            )}
           </div>
 
           {/* Dots Indicator */}

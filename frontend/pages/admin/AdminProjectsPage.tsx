@@ -204,8 +204,8 @@ export function AdminProjectsPage() {
               const features = project.features && Array.isArray(project.features) ? project.features : [];
               
               return (
-                <motion.div key={project.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-slate-800 rounded-xl p-4 lg:p-6 border border-slate-700">
-              <div className="flex items-start gap-3 lg:gap-4">
+                <motion.div key={project.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }} className="bg-slate-800 rounded-xl p-4 lg:p-6 border border-slate-700 overflow-hidden">
+              <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
                 {/* Project Image */}
                 {project.images && Array.isArray(project.images) && project.images[0] && (
                   <div className="w-24 h-24 lg:w-32 lg:h-32 flex-shrink-0 rounded-lg overflow-hidden">
@@ -242,37 +242,39 @@ export function AdminProjectsPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 lg:ml-4 flex-shrink-0">
+                <div className="flex gap-2 lg:ml-4 flex-shrink-0 items-start">
                   <button
                     onClick={() => handleEdit(project)}
-                    className="bg-orange-500 hover:bg-orange-600 text-white p-2 lg:p-3 rounded-lg transition-all"
+                    className="bg-orange-500 hover:bg-orange-600 text-white p-2 sm:p-2.5 lg:p-3 rounded-lg transition-all flex-shrink-0 flex items-center justify-center"
+                    style={{ minWidth: '36px', minHeight: '36px' }}
                   >
-                    <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
+                    <Edit className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                   </button>
                   {deleteConfirm === project.id ? (
-                    <>
+                    <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
                       <button 
                         onClick={handleDeleteConfirm}
                         disabled={deleting}
-                        className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm flex items-center gap-2"
+                        className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm flex items-center gap-1 sm:gap-2 whitespace-nowrap flex-shrink-0 font-medium"
                       >
-                        {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
+                        {deleting ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : 'Confirm'}
                       </button>
                       <button 
                         onClick={() => setDeleteConfirm(null)}
                         disabled={deleting}
-                        className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-300 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm"
+                        className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm whitespace-nowrap flex-shrink-0 font-medium"
                       >
                         Cancel
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <button 
                       onClick={() => setDeleteConfirm(project.id)}
                       disabled={deleting}
-                      className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-2 lg:p-3 rounded-lg transition-all"
+                      className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-2 sm:p-2.5 lg:p-3 rounded-lg transition-all flex-shrink-0 flex items-center justify-center"
+                      style={{ minWidth: '36px', minHeight: '36px' }}
                     >
-                      <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
+                      <Trash2 className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                     </button>
                   )}
                 </div>
