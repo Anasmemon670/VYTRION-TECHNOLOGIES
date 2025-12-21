@@ -99,7 +99,7 @@ export default function MessagesPage() {
                 toast.success("Message sent successfully!");
                 
                 // Select the newly sent message if possible
-                const newMessage = refreshResponse.messages?.find(m => m.id === response.userMessage.id);
+                const newMessage = refreshResponse.messages?.find((m: Message) => m.id === response.userMessage.id);
                 if (newMessage) {
                     setSelectedMessage(newMessage);
                 }
