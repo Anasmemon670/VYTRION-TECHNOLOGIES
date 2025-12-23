@@ -22,11 +22,104 @@ export default function HomePage() {
       ],
     },
     {
-      category: "Products & Orders",
+      category: "Products",
       endpoints: [
-        { method: "GET", path: "/api/products", description: "Get products list" },
-        { method: "GET", path: "/api/orders", description: "Get orders list" },
-        { method: "POST", path: "/api/returns/request", description: "Request product return" },
+        { method: "GET", path: "/api/products", description: "Get products list with filters" },
+        { method: "POST", path: "/api/products", description: "Create product (Admin only)" },
+        { method: "GET", path: "/api/products/[id]", description: "Get product by ID or slug" },
+        { method: "PUT", path: "/api/products/[id]", description: "Update product (Admin only)" },
+        { method: "DELETE", path: "/api/products/[id]", description: "Delete product (Admin only)" },
+      ],
+    },
+    {
+      category: "Categories",
+      endpoints: [
+        { method: "GET", path: "/api/categories", description: "Get all categories" },
+        { method: "POST", path: "/api/categories", description: "Create category (Admin only)" },
+        { method: "DELETE", path: "/api/categories/[id]", description: "Delete category (Admin only)" },
+      ],
+    },
+    {
+      category: "Orders",
+      endpoints: [
+        { method: "GET", path: "/api/orders", description: "Get orders list (user's own or all for admin)" },
+        { method: "POST", path: "/api/orders", description: "Create order" },
+        { method: "GET", path: "/api/orders/[id]", description: "Get order by ID" },
+        { method: "PUT", path: "/api/orders/[id]", description: "Update order status" },
+      ],
+    },
+    {
+      category: "Blog",
+      endpoints: [
+        { method: "GET", path: "/api/blog", description: "List blog posts" },
+        { method: "POST", path: "/api/blog", description: "Create blog post (Admin only)" },
+        { method: "GET", path: "/api/blog/[id]", description: "Get blog post by ID or slug" },
+        { method: "PUT", path: "/api/blog/[id]", description: "Update blog post (Admin only)" },
+        { method: "DELETE", path: "/api/blog/[id]", description: "Delete blog post (Admin only)" },
+      ],
+    },
+    {
+      category: "Projects",
+      endpoints: [
+        { method: "GET", path: "/api/projects", description: "List projects (public)" },
+        { method: "POST", path: "/api/projects", description: "Create project (Admin only)" },
+        { method: "GET", path: "/api/projects/[id]", description: "Get project by ID" },
+        { method: "PUT", path: "/api/projects/[id]", description: "Update project (Admin only)" },
+        { method: "DELETE", path: "/api/projects/[id]", description: "Delete project (Admin only)" },
+      ],
+    },
+    {
+      category: "Services",
+      endpoints: [
+        { method: "GET", path: "/api/services", description: "List services (public - only active)" },
+        { method: "POST", path: "/api/services", description: "Create service (Admin only)" },
+        { method: "GET", path: "/api/services/[id]", description: "Get service by ID" },
+        { method: "PUT", path: "/api/services/[id]", description: "Update service (Admin only)" },
+        { method: "DELETE", path: "/api/services/[id]", description: "Delete service (Admin only)" },
+      ],
+    },
+    {
+      category: "Contact",
+      endpoints: [
+        { method: "POST", path: "/api/contact", description: "Create contact message (public, rate limited)" },
+        { method: "GET", path: "/api/contact", description: "List contact messages (Admin only)" },
+        { method: "GET", path: "/api/contact/[id]", description: "Get contact message by ID (Admin only)" },
+        { method: "PUT", path: "/api/contact/[id]", description: "Update contact message (Admin only)" },
+        { method: "DELETE", path: "/api/contact/[id]", description: "Delete contact message (Admin only)" },
+        { method: "POST", path: "/api/contact/[id]/reply", description: "Reply to contact message (Admin only)" },
+        { method: "GET", path: "/api/contact/[id]/conversation", description: "Get conversation history (Admin only)" },
+      ],
+    },
+    {
+      category: "Messages",
+      endpoints: [
+        { method: "GET", path: "/api/messages", description: "Get user messages (authenticated) or all messages (admin)" },
+        { method: "POST", path: "/api/messages", description: "Create user message (Admin can send to users, Users can send to admins)" },
+        { method: "GET", path: "/api/messages/[id]", description: "Get message by ID" },
+        { method: "PUT", path: "/api/messages/[id]", description: "Update message (mark as read)" },
+        { method: "DELETE", path: "/api/messages/[id]", description: "Delete message (Soft delete)" },
+        { method: "POST", path: "/api/messages/[id]/seen", description: "Mark message as seen (User only)" },
+      ],
+    },
+    {
+      category: "Checkout & Payments",
+      endpoints: [
+        { method: "POST", path: "/api/checkout", description: "Create Stripe checkout session" },
+        { method: "POST", path: "/api/webhooks/stripe", description: "Handle Stripe webhook events" },
+      ],
+    },
+    {
+      category: "Returns",
+      endpoints: [
+        { method: "GET", path: "/api/returns/request", description: "Get return requests (user's own or all for admin)" },
+        { method: "POST", path: "/api/returns/request", description: "Create return request" },
+        { method: "PUT", path: "/api/returns/request", description: "Update return status (Admin only)" },
+      ],
+    },
+    {
+      category: "Health & System",
+      endpoints: [
+        { method: "GET", path: "/api/health", description: "Health check endpoint" },
       ],
     },
   ];
