@@ -57,7 +57,7 @@ export default function MessagesPage() {
                 const response = await messagesAPI.getAll({ limit: 50 });
                 const fetchedMessages = response.messages || [];
                 // Filter out any deleted messages (extra safety layer)
-                const filteredMessages = fetchedMessages.filter(m => !deletedMessageIds.has(m.id));
+                const filteredMessages = fetchedMessages.filter((m: Message) => !deletedMessageIds.has(m.id));
                 setMessages(filteredMessages);
             } catch (err: any) {
                 console.error('Error fetching messages:', err);
@@ -93,7 +93,7 @@ export default function MessagesPage() {
                 const response = await messagesAPI.getAll({ limit: 50 });
                 const updatedMessages = response.messages || [];
                 // Filter out deleted messages
-                const filteredMessages = updatedMessages.filter(m => !deletedMessageIds.has(m.id));
+                const filteredMessages = updatedMessages.filter((m: Message) => !deletedMessageIds.has(m.id));
                 setMessages(filteredMessages);
                 // Then fetch conversation with updated messages
                 await fetchConversation(selectedMessage.subject, filteredMessages);
@@ -286,7 +286,7 @@ export default function MessagesPage() {
                 const refreshResponse = await messagesAPI.getAll({ limit: 50 });
                 const updatedMessages = refreshResponse.messages || [];
                 // Filter out deleted messages
-                const filteredMessages = updatedMessages.filter(m => !deletedMessageIds.has(m.id));
+                const filteredMessages = updatedMessages.filter((m: Message) => !deletedMessageIds.has(m.id));
                 setMessages(filteredMessages);
                 
                 // If no message was selected, select the thread now
@@ -392,13 +392,13 @@ export default function MessagesPage() {
             const refreshResponse = await messagesAPI.getAll({ limit: 50 });
             const updatedMessages = refreshResponse.messages || [];
             // Also filter out deleted messages locally as backup
-            const filteredMessages = updatedMessages.filter(m => !deletedMessageIds.has(m.id) && m.id !== deletedMessageId);
+            const filteredMessages = updatedMessages.filter((m: Message) => !deletedMessageIds.has(m.id) && m.id !== deletedMessageId);
             setMessages(filteredMessages);
             
             // If the deleted message was the selected one, check if there are other messages in the thread
             if (selectedMessage?.id === deletedMessageId) {
                 const baseSubject = selectedMessage.subject.replace(/^Re: /i, '').trim();
-                const remainingMessages = filteredMessages.filter(m => {
+                const remainingMessages = filteredMessages.filter((m: Message) => {
                     const mSubject = m.subject.replace(/^Re: /i, '').trim();
                     return mSubject === baseSubject && !deletedMessageIds.has(m.id) && m.id !== deletedMessageId;
                 });
