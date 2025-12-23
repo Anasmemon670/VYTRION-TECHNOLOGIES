@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
@@ -14,10 +14,22 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const lastSubmitTimeRef = useRef<number>(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Prevent rapid successive submissions (debounce)
+    const now = Date.now();
+    const timeSinceLastSubmit = now - lastSubmitTimeRef.current;
+    const minTimeBetweenSubmits = 2000; // 2 seconds minimum between submissions
+
+    if (timeSinceLastSubmit < minTimeBetweenSubmits && lastSubmitTimeRef.current > 0) {
+      const remainingTime = Math.ceil((minTimeBetweenSubmits - timeSinceLastSubmit) / 1000);
+      setError(`Please wait ${remainingTime} second${remainingTime !== 1 ? 's' : ''} before trying again.`);
+      return;
+    }
 
     // Validation
     if (!email) {
@@ -32,6 +44,8 @@ export function LoginPage() {
       setError("Password must be at least 6 characters");
       return;
     }
+
+    lastSubmitTimeRef.current = now;
 
     try {
       const success = await login(email, password);
@@ -52,7 +66,16 @@ export function LoginPage() {
         setError("Invalid email or password");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Login failed. Please try again.");
+      // Handle rate limiting and other errors
+      if (err.message) {
+        setError(err.message);
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.status === 429) {
+        setError("Too many login attempts. Please wait a moment and try again.");
+      } else {
+        setError("Login failed. Please try again.");
+      }
     }
   };
 

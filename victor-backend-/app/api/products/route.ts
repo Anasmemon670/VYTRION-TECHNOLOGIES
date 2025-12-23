@@ -10,6 +10,7 @@ const productSchema = z.object({
   discount: z.number().int().min(0).max(100).optional().nullable(),
   hsCode: z.string().min(1, 'HS Code is required'),
   category: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
   stock: z.number().int().min(0).default(0),
   images: z.array(z.string()).optional().nullable(),
   featured: z.boolean().default(false),
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare final data object for Prisma - ensure all fields are properly typed
     // Map form data to Prisma schema exactly as per form structure
+    // Preserve category string for backward compatibility, also support categoryId
     const prismaData: any = {
       title: String(data.title).trim(),
       description: data.description ? String(data.description).trim() : null,
@@ -186,6 +188,7 @@ export async function POST(request: NextRequest) {
       discount: data.discount !== null && data.discount !== undefined ? Number(data.discount) : null,
       hsCode: String(data.hsCode).trim(),
       category: data.category ? String(data.category).trim() : null,
+      categoryId: data.categoryId ? String(data.categoryId).trim() : null,
       stock: Number(data.stock) || 0,
       featured: Boolean(data.featured) || false,
       slug: slug, // Use the slug generated above

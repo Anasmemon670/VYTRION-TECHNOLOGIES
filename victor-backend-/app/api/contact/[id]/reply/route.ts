@@ -66,24 +66,55 @@ export async function POST(
 
     if (user) {
       // If user exists, create UserMessage for them
-      userMessage = await prisma.userMessage.create({
-        data: {
-          userId: user.id,
-          sender: 'Admin',
-          subject: data.subject,
-          message: data.message,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
+      // Try to include contactMessageId and status, but handle if columns don't exist yet
+      const messageData: any = {
+        userId: user.id,
+        sender: 'Admin',
+        subject: data.subject,
+        message: data.message,
+      }
+      
+      // Only include these fields if the migration has been run
+      try {
+        // Try to create with new fields - if they don't exist, Prisma will error
+        // and we'll catch it and retry without them
+        userMessage = await prisma.userMessage.create({
+          data: {
+            ...messageData,
+            contactMessageId: messageId,
+            status: 'SENT',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
             },
           },
-        },
-      })
+        })
+      } catch (error: any) {
+        // If the new columns don't exist yet, create without them
+        if (error.message?.includes('contactMessageId') || error.message?.includes('status')) {
+          userMessage = await prisma.userMessage.create({
+            data: messageData,
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+          })
+        } else {
+          throw error
+        }
+      }
     }
     // Note: If user doesn't exist, we still mark the contact message as read
     // In a production system, you would send an email notification here
@@ -99,7 +130,10 @@ export async function POST(
         message: user 
           ? 'Reply sent successfully. The user will see it in their messages.'
           : 'Reply recorded. Note: User is not registered, so they will not see this in their account. Consider sending an email notification.',
-        userMessage,
+        userMessage: userMessage ? {
+          ...userMessage,
+          status: userMessage.status || 'SENT',
+        } : null,
         userFound: !!user,
       },
       { status: 201 }

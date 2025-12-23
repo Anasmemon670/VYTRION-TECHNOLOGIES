@@ -194,6 +194,8 @@ export const contactAPI = {
     api.delete(`/contact/${id}`).then(r => r.data),
   reply: (id: string, data: any) =>
     api.post(`/contact/${id}/reply`, data).then(r => r.data),
+  getConversation: (id: string) =>
+    api.get(`/contact/${id}/conversation`).then(r => r.data),
 }
 
 // =======================
@@ -206,6 +208,10 @@ export const messagesAPI = {
     api.post('/messages', data).then(r => r.data),
   update: (id: string, data: any) =>
     api.put(`/messages/${id}`, data).then(r => r.data),
+  markAsSeen: (id: string) =>
+    api.post(`/messages/${id}/seen`).then(r => r.data),
+  delete: (id: string, forEveryone: boolean = false) =>
+    api.delete(`/messages/${id}?forEveryone=${forEveryone}`).then(r => r.data),
 }
 
 // =======================
@@ -217,6 +223,15 @@ export const wishlistAPI = {
     api.post('/wishlist', { productId }).then(r => r.data),
   remove: (productId: string) =>
     api.delete(`/wishlist/${productId}`).then(r => r.data),
+}
+
+// =======================
+// CATEGORIES API
+// =======================
+export const categoriesAPI = {
+  getAll: () => api.get('/categories').then(r => r.data),
+  create: (data: any) => api.post('/categories', data).then(r => r.data),
+  delete: (id: string) => api.delete(`/categories/${id}`).then(r => r.data),
 }
 
 export default api

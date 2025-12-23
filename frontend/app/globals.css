@@ -3376,3 +3376,55 @@ html {
     opacity: .5;
   }
 }
+
+/* Custom Scrollbar for Chat Messages */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+  overflow-y: auto !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  display: block;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 10px;
+  min-height: 40px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Always show scrollbar when content overflows */
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #94a3b8;
+}
+
+/* Select dropdown styling for dark theme */
+select {
+  color: #ffffff;
+  background-color: #334155;
+}
+
+select option {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:checked,
+select option:focus {
+  background-color: #0ea5e9 !important;
+  color: #ffffff !important;
+}

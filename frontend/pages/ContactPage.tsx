@@ -53,12 +53,6 @@ export function ContactPage() {
           Get in touch with us for support or inquiries.
         </p>
 
-        {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <p className="text-green-600">Message sent successfully! We'll get back to you soon.</p>
-          </div>
-        )}
-
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-600">{error}</p>
@@ -133,6 +127,12 @@ export function ContactPage() {
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? 'Sending...' : 'Send'}
           </button>
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-600">Message sent successfully! We'll get back to you soon.</p>
+            </div>
+          )}
         </form>
       </div>
     </div>

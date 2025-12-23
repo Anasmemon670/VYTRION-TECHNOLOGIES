@@ -30,18 +30,18 @@ const iconMap: Record<string, LucideIcon> = {
   Rocket: RocketIcon
 };
 
-const stats = [
-  { number: "500+", label: "Projects Completed" },
-  { number: "98%", label: "Client Satisfaction" },
-  { number: "50+", label: "Team Members" },
-  { number: "24/7", label: "Support Available" },
-];
-
 export function ServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const stats = [
+    { number: services.length.toString(), label: "Services Available" },
+    { number: "98%", label: "Client Satisfaction" },
+    { number: "50+", label: "Team Members" },
+    { number: "24/7", label: "Support Available" },
+  ];
 
   useEffect(() => {
     const fetchServices = async () => {

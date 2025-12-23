@@ -117,7 +117,7 @@ export function Header() {
     router.push("/login");
   };
 
-  // Fetch messages when user is logged in
+  // Fetch messages when user is logged in and refresh periodically
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user) {
@@ -128,16 +128,46 @@ export function Header() {
       try {
         const response = await messagesAPI.getAll({ limit: 50 });
         setMessages(response.messages || []);
-      } catch (err) {
-        console.error('Error fetching messages:', err);
+      } catch (err: any) {
+        // Silently fail for header - don't show errors to user
+        // Only log if it's not a 401 (unauthorized) which is expected when logged out
+        if (err.response?.status !== 401) {
+          console.error('Error fetching messages in header:', err);
+        }
         setMessages([]);
       }
     };
 
     fetchMessages();
+    
+    // Refresh messages every 10 seconds to get new admin messages
+    const interval = setInterval(fetchMessages, 10000);
+    
+    return () => clearInterval(interval);
   }, [user]);
 
-  const unreadCount = messages.filter(msg => !msg.isRead).length;
+  // Count unread messages from admin only
+  const unreadAdminCount = messages.filter(msg => !msg.isRead && msg.sender === 'Admin').length;
+
+  // Listen for message read events to update notification
+  useEffect(() => {
+    const handleMessageRead = () => {
+      // Refresh messages when a message is marked as read
+      const fetchMessages = async () => {
+        if (!user) return;
+        try {
+          const response = await messagesAPI.getAll({ limit: 50 });
+          setMessages(response.messages || []);
+        } catch (err) {
+          console.error('Error fetching messages:', err);
+        }
+      };
+      fetchMessages();
+    };
+
+    window.addEventListener('messageRead', handleMessageRead);
+    return () => window.removeEventListener('messageRead', handleMessageRead);
+  }, [user]);
 
   const markAsRead = (id: string) => {
     setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, isRead: true } : msg));
@@ -272,7 +302,7 @@ export function Header() {
               </Link>
             )}
 
-            {/* Messages Icon */}
+            {/* Messages Icon with Badge */}
             <div className="relative">
               <button
                 onClick={() => router.push("/messages")}
@@ -280,6 +310,11 @@ export function Header() {
                 aria-label="Messages"
               >
                 <MessageSquare className="w-6 h-6" />
+                {unreadAdminCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] h-5 w-5 flex items-center justify-center rounded-full font-bold border-2 border-slate-900">
+                    {unreadAdminCount > 9 ? '9+' : unreadAdminCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -509,7 +544,7 @@ export function Header() {
                   className="px-3 py-2 text-white hover:bg-slate-800 hover:text-cyan-400 transition-colors rounded flex items-center justify-between"
                 >
                   Messages
-                  {unreadCount > 0 && <span className="bg-cyan-500 text-white text-xs px-2 py-0.5 rounded-full">{unreadCount}</span>}
+                  {unreadAdminCount > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">{unreadAdminCount > 9 ? '9+' : unreadAdminCount}</span>}
                 </button>
 
                 <button

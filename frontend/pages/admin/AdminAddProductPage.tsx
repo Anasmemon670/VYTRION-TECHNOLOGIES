@@ -6,8 +6,8 @@ import React from "react";
 import { useRouter, useParams } from "next/navigation";
 
 import { AdminLayout } from "../../components/admin/AdminLayout";
-import { ArrowLeft, Upload, Package, X, Loader2 } from "lucide-react";
-import { productsAPI } from "@/lib/api";
+import { ArrowLeft, Upload, Package, X, Loader2, CheckCircle, ChevronDown } from "lucide-react";
+import { productsAPI, categoriesAPI } from "@/lib/api";
 
 interface Product {
   id: number;
@@ -45,7 +45,29 @@ function AdminAddProductPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* -------------------- LOAD CATEGORIES -------------------- */
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await categoriesAPI.getAll();
+        setCategories(response.categories || []);
+      } catch (err) {
+        console.error('Error loading categories:', err);
+        // Don't block the form if categories fail to load
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   /* -------------------- LOAD PRODUCT (NO CHANGE) -------------------- */
   useEffect(() => {
@@ -54,8 +76,8 @@ function AdminAddProductPage() {
         try {
           setLoading(true);
           const response = await productsAPI.getById(id);
-          const product = response.product;
-
+            const product = response.product;
+          
           if (product) {
             setFormData({
               name: product.title || "",
@@ -189,29 +211,41 @@ function AdminAddProductPage() {
       let processedImages: string[] | undefined = undefined;
       if (images.length > 0) {
         processedImages = images.map(img => img);
-      }
+          }
 
+      // Find categoryId if category name is selected
+      const selectedCategory = categories.find(cat => cat.name === formData.category.trim());
+      
       const productData: any = {
-        title: formData.name.trim(),
-        price: price,
-        hsCode: formData.hsCode.trim(),
-        stock: stock,
-        ...(formData.description.trim() ? { description: formData.description.trim() } : {}),
-        ...(formData.category.trim() ? { category: formData.category.trim() } : {}),
-        ...(discount > 0 ? { discount: discount } : {}),
-        featured: formData.bigOffer || formData.onOffer || false,
-        ...(processedImages && processedImages.length > 0 ? { images: processedImages } : {}),
-      };
+          title: formData.name.trim(),
+          price: price,
+          hsCode: formData.hsCode.trim(),
+          stock: stock,
+          ...(formData.description.trim() ? { description: formData.description.trim() } : {}),
+          // Preserve category string for backward compatibility
+          ...(formData.category.trim() ? { category: formData.category.trim() } : {}),
+          // Also send categoryId if category is selected from dropdown
+          ...(selectedCategory ? { categoryId: selectedCategory.id } : {}),
+          ...(discount > 0 ? { discount: discount } : {}),
+          featured: formData.bigOffer || formData.onOffer || false,
+          ...(processedImages && processedImages.length > 0 ? { images: processedImages } : {}),
+        };
 
       if (isEdit && id) {
         await productsAPI.update(id, productData);
-        alert("Product updated successfully!");
+        setSuccessMessage("Product updated successfully!");
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          router.push("/admin/products");
+        }, 1500);
       } else {
         await productsAPI.create(productData);
-        alert("Product added successfully!");
+        setSuccessMessage("Product added successfully!");
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          router.push("/admin/products");
+        }, 1500);
       }
-
-      router.push("/admin/products");
     } catch (err: any) {
       console.error('Error saving product:', err);
       const errorMessage = err.response?.data?.error || err.response?.data?.details || err.message || 'Failed to save product';
@@ -230,7 +264,7 @@ function AdminAddProductPage() {
   const labelClass = "text-slate-300 text-sm mb-2 block";
 
   const inputClass =
-    "w-full px-4 py-3 bg-slate-700/80 border border-slate-600 text-white rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-500";
+    "w-full px-4 py-3 bg-slate-700/80 border border-slate-600 text-white rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none cursor-pointer";
 
   /* -------------------- LOADING -------------------- */
   if (loading) {
@@ -280,6 +314,7 @@ function AdminAddProductPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
+                  placeholder="Enter product name"
                   className={`${inputClass} ${errors.name ? 'border-red-500' : ''}`}
                 />
                 {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -287,13 +322,36 @@ function AdminAddProductPage() {
 
               <div>
                 <label className={labelClass}>Category *</label>
-                <input
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className={inputClass}
-                />
+                <div className="relative">
+                  <select
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({ ...formData, category: e.target.value })
+                    }
+                    className={`${inputClass} pr-10 ${errors.category ? 'border-red-500' : ''}`}
+                    disabled={loadingCategories}
+                    style={{
+                      color: '#ffffff',
+                      backgroundColor: '#334155',
+                    }}
+                  >
+                    <option value="" style={{ backgroundColor: '#1e293b', color: '#ffffff' }}>Select a category</option>
+                    {categories.map((cat) => (
+                      <option 
+                        key={cat.id} 
+                        value={cat.name}
+                        style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+                      >
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                {errors.category && <p className="text-red-400 text-xs mt-1">{errors.category}</p>}
+                {loadingCategories && (
+                  <p className="text-slate-500 text-xs mt-1">Loading categories...</p>
+                )}
               </div>
 
               <div>
@@ -305,6 +363,7 @@ function AdminAddProductPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, price: e.target.value })
                   }
+                  placeholder="Enter price"
                   className={`${inputClass} ${errors.price ? 'border-red-500' : ''}`}
                 />
                 {errors.price && <p className="text-red-400 text-xs mt-1">{errors.price}</p>}
@@ -318,6 +377,7 @@ function AdminAddProductPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, discount: e.target.value })
                   }
+                  placeholder="Enter discount percentage"
                   className={inputClass}
                 />
               </div>
@@ -329,6 +389,7 @@ function AdminAddProductPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, hsCode: e.target.value })
                   }
+                  placeholder="e.g., 123456"
                   className={inputClass}
                 />
               </div>
@@ -341,6 +402,7 @@ function AdminAddProductPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, stock: e.target.value })
                   }
+                  placeholder="Enter stock quantity"
                   className={inputClass}
                 />
               </div>
@@ -354,6 +416,7 @@ function AdminAddProductPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
+                placeholder="Enter product description"
                 className={`${inputClass} resize-none ${errors.description ? 'border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description}</p>}
@@ -423,25 +486,14 @@ function AdminAddProductPage() {
             )}
           </div>
 
-          {/* PRODUCT TYPE */}
+          {/* OFFERS */}
           <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border border-emerald-500/30 rounded-2xl p-5 sm:p-6 shadow-xl">
             <div className="flex items-center gap-2 mb-4">
               <Package className="text-emerald-400" />
               <h2 className="text-white text-xl font-semibold">
-                Product Type
+                Offers
               </h2>
             </div>
-
-            <select
-              value={formData.productType}
-              onChange={(e) =>
-                setFormData({ ...formData, productType: e.target.value })
-              }
-              className={inputClass}
-            >
-              <option value="internal">Internal Product (API)</option>
-              <option value="external">External Product</option>
-            </select>
 
             <div className="mt-4 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
               <label className="flex items-start gap-3">
@@ -478,10 +530,43 @@ function AdminAddProductPage() {
               disabled={saving}
               className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold shadow-lg"
             >
-              {saving ? "Updating..." : "Update Product"}
+              {saving ? (isEdit ? "Updating..." : "Adding Product...") : (isEdit ? "Update Product" : "Add Product")}
             </button>
           </div>
         </form>
+
+        {/* SUCCESS MODAL */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 border border-slate-700 shadow-2xl max-w-md w-full mx-4"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 p-3 bg-green-500/20 rounded-full">
+                  <CheckCircle className="w-12 h-12 text-green-500" />
+                </div>
+                <h3 className="text-white text-xl font-semibold mb-2">
+                  Success!
+                </h3>
+                <p className="text-slate-300 text-sm mb-6">
+                  {successMessage}
+                </p>
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    router.push("/admin/products");
+                  }}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition-colors"
+                >
+                  OK
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

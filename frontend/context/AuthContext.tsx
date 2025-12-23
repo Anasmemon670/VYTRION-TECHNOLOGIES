@@ -130,10 +130,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
+    
+    // Check for failed attempts tracking
+    const failedAttemptsKey = `failedLoginAttempts_${email}`;
+    const failedAttemptsData = typeof window !== 'undefined' 
+      ? localStorage.getItem(failedAttemptsKey) 
+      : null;
+    
+    let failedAttempts = 0;
+    let lastAttemptTime = 0;
+    
+    if (failedAttemptsData) {
+      try {
+        const data = JSON.parse(failedAttemptsData);
+        failedAttempts = data.count || 0;
+        lastAttemptTime = data.lastAttempt || 0;
+      } catch {
+        // Invalid data, reset
+      }
+    }
+    
+    // Check if user has exceeded max failed attempts
+    const MAX_FAILED_ATTEMPTS = 5;
+    const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+    
+    if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      const timeSinceLastAttempt = Date.now() - lastAttemptTime;
+      
+      if (timeSinceLastAttempt < LOCKOUT_DURATION) {
+        const remainingMinutes = Math.ceil((LOCKOUT_DURATION - timeSinceLastAttempt) / 60000);
+        setIsLoading(false);
+        throw new Error(`Too many failed login attempts. Please try again after ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`);
+      } else {
+        // Lockout period expired, reset attempts
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(failedAttemptsKey);
+        }
+        failedAttempts = 0;
+      }
+    }
+    
     try {
       const response = await authAPI.login({ email, password });
       
       if (response.user && response.token && response.refreshToken) {
+        // Success - clear failed attempts
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(failedAttemptsKey);
+        }
+        
         // Store tokens
         localStorage.setItem("accessToken", response.token);
         localStorage.setItem("refreshToken", response.refreshToken);
@@ -146,12 +191,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
       
+      // Invalid response - increment failed attempts
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(failedAttemptsKey, JSON.stringify({
+          count: failedAttempts + 1,
+          lastAttempt: Date.now()
+        }));
+      }
+      
       setIsLoading(false);
       return false;
     } catch (error: any) {
       console.error("Login error:", error);
       setIsLoading(false);
-      return false;
+      
+      // Handle rate limiting (429) errors
+      if (error.response?.status === 429) {
+        const resetTime = error.response.headers['x-ratelimit-reset'];
+        let errorMessage = "Too many login attempts. Please wait a moment and try again.";
+        
+        if (resetTime) {
+          try {
+            const resetDate = new Date(resetTime);
+            const now = new Date();
+            const secondsUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / 1000);
+            
+            if (secondsUntilReset > 0) {
+              errorMessage = `Too many login attempts. Please try again in ${secondsUntilReset} second${secondsUntilReset !== 1 ? 's' : ''}.`;
+            }
+          } catch {
+            // If date parsing fails, use default message
+          }
+        }
+        
+        // Increment failed attempts for rate limit too
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(failedAttemptsKey, JSON.stringify({
+            count: failedAttempts + 1,
+            lastAttempt: Date.now()
+          }));
+        }
+        
+        // Throw error with message so LoginPage can catch and display it
+        throw new Error(errorMessage);
+      }
+      
+      // Handle invalid credentials (401) - increment failed attempts
+      if (error.response?.status === 401) {
+        const newFailedAttempts = failedAttempts + 1;
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(failedAttemptsKey, JSON.stringify({
+            count: newFailedAttempts,
+            lastAttempt: Date.now()
+          }));
+        }
+        
+        // Check if we should lock the account
+        if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
+          throw new Error(`Too many failed login attempts. Please try again after 15 minutes.`);
+        } else {
+          const remainingAttempts = MAX_FAILED_ATTEMPTS - newFailedAttempts;
+          throw new Error(`Invalid email or password. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining before temporary lockout.`);
+        }
+      }
+      
+      // Re-throw other errors so LoginPage can handle them
+      throw error;
     }
   };
 
@@ -212,9 +318,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await authAPI.logout();
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch (error: any) {
+      // Handle rate limiting (429) errors gracefully - still logout locally
+      if (error.response?.status === 429) {
+        console.warn("Logout rate limited, clearing auth locally");
+      } else {
+        console.error("Logout error:", error);
+      }
     } finally {
+      // Always clear auth locally, even if API call fails
       clearAuth();
     }
   };

@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect } from "react";
 import { AdminLayout } from "../../components/admin/AdminLayout";
-import { Edit, Trash2, Plus, X, Upload, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, X, Upload, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { projectsAPI } from "@/lib/api";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
@@ -28,6 +28,9 @@ export function AdminProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -126,7 +129,9 @@ export function AdminProjectsPage() {
           features: features.length > 0 ? features : null,
         });
         setProjects(projects.map(p => p.id === editingProject.id ? response.project : p));
-        alert("Project updated successfully!");
+        setSuccessMessage("Project updated successfully!");
+        setShowSuccessModal(true);
+        setShowEditModal(false);
       } else {
         // Create new project
         const response = await projectsAPI.create({
@@ -139,9 +144,10 @@ export function AdminProjectsPage() {
           features: features.length > 0 ? features : undefined,
         });
         setProjects([response.project, ...projects]);
-        alert("Project created successfully!");
+        setSuccessMessage("Project created successfully!");
+        setShowSuccessModal(true);
+        setShowEditModal(false);
       }
-      setShowEditModal(false);
     } catch (err: any) {
       console.error('Error saving project:', err);
       alert(err.response?.data?.error || 'Failed to save project');
@@ -150,14 +156,20 @@ export function AdminProjectsPage() {
     }
   };
 
+  const handleDeleteCancel = () => {
+    setProjectToDelete(null);
+    setDeleteConfirm(null);
+  };
+
   const handleDeleteConfirm = async () => {
-    if (!deleteConfirm) return;
+    if (!deleteConfirm || !projectToDelete) return;
 
     try {
       setDeleting(true);
       await projectsAPI.delete(deleteConfirm);
       setProjects(projects.filter(p => p.id !== deleteConfirm));
       setDeleteConfirm(null);
+      setProjectToDelete(null);
     } catch (err: any) {
       console.error('Error deleting project:', err);
       alert(err.response?.data?.error || 'Failed to delete project');
@@ -250,33 +262,17 @@ export function AdminProjectsPage() {
                   >
                     <Edit className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                   </button>
-                  {deleteConfirm === project.id ? (
-                    <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
-                      <button 
-                        onClick={handleDeleteConfirm}
-                        disabled={deleting}
-                        className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm flex items-center gap-1 sm:gap-2 whitespace-nowrap flex-shrink-0 font-medium"
-                      >
-                        {deleting ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : 'Confirm'}
-                      </button>
-                      <button 
-                        onClick={() => setDeleteConfirm(null)}
-                        disabled={deleting}
-                        className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm whitespace-nowrap flex-shrink-0 font-medium"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => setDeleteConfirm(project.id)}
-                      disabled={deleting}
-                      className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-2 sm:p-2.5 lg:p-3 rounded-lg transition-all flex-shrink-0 flex items-center justify-center"
-                      style={{ minWidth: '36px', minHeight: '36px' }}
-                    >
-                      <Trash2 className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => {
+                      setDeleteConfirm(project.id);
+                      setProjectToDelete(project);
+                    }}
+                    disabled={deleting}
+                    className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-2 sm:p-2.5 lg:p-3 rounded-lg transition-all flex-shrink-0 flex items-center justify-center"
+                    style={{ minWidth: '36px', minHeight: '36px' }}
+                  >
+                    <Trash2 className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -407,6 +403,101 @@ export function AdminProjectsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {deleteConfirm && projectToDelete && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 sm:p-6 max-w-md w-full border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
+                  </div>
+                  <h2 className="text-white text-lg sm:text-xl font-semibold">Delete Project</h2>
+                </div>
+                <button
+                  onClick={handleDeleteCancel}
+                  className="text-slate-400 hover:text-white transition-colors flex-shrink-0 p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-slate-300 text-sm sm:text-base mb-2">
+                Are you sure you want to delete this project?
+              </p>
+              <p className="text-white font-semibold mb-4 sm:mb-6 break-words">
+                "{projectToDelete.title}"
+              </p>
+              <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">
+                This action cannot be undone.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="flex-1 px-6 py-3 bg-slate-700/80 hover:bg-slate-600 text-white rounded-xl transition-all duration-200 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl border border-slate-600 hover:border-slate-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                  className="flex-1 px-6 py-3 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl hover:shadow-red-500/30 border border-red-600 hover:border-red-500"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span>Delete Project</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SUCCESS MODAL */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-2xl max-w-md w-full mx-4"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 p-3 bg-green-500/20 rounded-full">
+                <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-500" />
+              </div>
+              <h3 className="text-white text-lg sm:text-xl font-semibold mb-2">
+                Success!
+              </h3>
+              <p className="text-slate-300 text-sm sm:text-base mb-6">
+                {successMessage}
+              </p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-2.5 sm:py-3 rounded-xl font-semibold transition-colors text-sm sm:text-base"
+              >
+                OK
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </AdminLayout>

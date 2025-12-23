@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 const updateUserMessageSchema = z.object({
   isRead: z.boolean().optional(),
+  status: z.enum(['SENT', 'SEEN']).optional(),
 })
 
 // Handle CORS preflight
@@ -118,11 +119,21 @@ export async function PUT(
       ))
     }
 
+    const updateData: any = {}
+    if (data.isRead !== undefined) {
+      updateData.isRead = data.isRead
+    }
+    if (data.status !== undefined) {
+      updateData.status = data.status
+      // If marking as SEEN, set seenAt timestamp
+      if (data.status === 'SEEN') {
+        updateData.seenAt = new Date()
+      }
+    }
+
     const message = await prisma.userMessage.update({
       where: { id: resolvedParams.id },
-      data: {
-        ...(data.isRead !== undefined && { isRead: data.isRead }),
-      },
+      data: updateData,
       include: {
         user: {
           select: {
@@ -170,22 +181,81 @@ export async function PUT(
   }
 }
 
-// DELETE /api/messages/[id] - Delete message (Admin only)
+// DELETE /api/messages/[id] - Delete message (Soft delete: for user or for everyone)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const adminCheck = await requireAdmin(request)
-    if (adminCheck.error) return adminCheck.error
+    const authCheck = await requireAuth(request)
+    if (authCheck.error) return authCheck.error
 
     const resolvedParams = params instanceof Promise ? await params : params
-    await prisma.userMessage.delete({
+    const { searchParams } = new URL(request.url)
+    const deleteForEveryone = searchParams.get('forEveryone') === 'true'
+    
+    // Check if message exists
+    const existingMessage = await prisma.userMessage.findUnique({
       where: { id: resolvedParams.id },
     })
 
+    if (!existingMessage) {
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Message not found' },
+        { status: 404 }
+      ))
+    }
+
+    // Check if already deleted for everyone
+    if (existingMessage.deletedForEveryone) {
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Message already deleted for everyone' },
+        { status: 400 }
+      ))
+    }
+
+    // Users can only delete their own messages, admins can delete any
+    const isMessageOwner = existingMessage.userId === authCheck.user!.id
+    const isAdmin = authCheck.user!.isAdmin
+    
+    if (!isAdmin && !isMessageOwner) {
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Access denied. You can only delete your own messages.' },
+        { status: 403 }
+      ))
+    }
+
+    // Update message with soft delete flags
+    const updateData: any = {}
+    
+    if (deleteForEveryone) {
+      // Delete for everyone - both user and admin won't see it
+      updateData.deletedForEveryone = true
+      updateData.deletedForUser = true
+    } else {
+      // Delete for user only - mark as deleted for this user
+      if (isMessageOwner) {
+        // User deleting their own message - hide from user only
+        updateData.deletedForUser = true
+      } else if (isAdmin) {
+        // Admin deleting user's message - hide from user only
+        updateData.deletedForUser = true
+      }
+    }
+
+    await prisma.userMessage.update({
+      where: { id: resolvedParams.id },
+      data: updateData,
+    })
+
     const response = NextResponse.json(
-      { message: 'Message deleted successfully' },
+      { 
+        message: deleteForEveryone 
+          ? 'Message deleted for everyone' 
+          : 'Message deleted for you',
+        deletedForEveryone: updateData.deletedForEveryone || false,
+        deletedForUser: updateData.deletedForUser || false,
+      },
       { status: 200 }
     )
 

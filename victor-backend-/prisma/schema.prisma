@@ -31,6 +31,15 @@ model User {
   @@index([phone])
 }
 
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@index([name])
+}
+
 model Product {
   id          String       @id @default(cuid())
   title       String
@@ -40,6 +49,8 @@ model Product {
   discount    Int?
   hsCode      String
   category    String?
+  categoryId  String?
+  categoryRef Category?    @relation(fields: [categoryId], references: [id])
   stock       Int          @default(0)
   images      Json?
   featured    Boolean      @default(false)
@@ -48,6 +59,7 @@ model Product {
   orderItems  OrderItem[]
 
   @@index([category])
+  @@index([categoryId])
   @@index([slug])
 }
 
@@ -175,19 +187,28 @@ model ContactMessage {
 }
 
 model UserMessage {
-  id          String     @id @default(cuid())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      String
-  sender      String     // "Admin", "System", "Support", etc.
-  subject     String
-  message     String     @db.Text
-  isRead      Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id              String          @id @default(cuid())
+  user            User            @relation(fields: [userId], references: [id])
+  userId          String
+  sender          String          // "Admin", "System", "Support", etc.
+  subject         String
+  message         String          @db.Text
+  isRead          Boolean         @default(false)
+  contactMessageId String?        // Link to ContactMessage if this is a reply
+  status          MessageStatus   @default(SENT)
+  seenAt          DateTime?
+  deletedForUser  Boolean         @default(false) // Soft delete for user
+  deletedForEveryone Boolean      @default(false) // Soft delete for everyone
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([contactMessageId])
+  @@index([status])
+  @@index([deletedForUser])
+  @@index([deletedForEveryone])
 }
 
 model CurrencyRate {
@@ -210,4 +231,9 @@ enum ReturnStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum MessageStatus {
+  SENT
+  SEEN
 }

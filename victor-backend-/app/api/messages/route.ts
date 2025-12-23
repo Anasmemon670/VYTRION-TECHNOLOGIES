@@ -38,12 +38,24 @@ export async function GET(request: NextRequest) {
     const authCheck = await requireAuth(request)
     if (authCheck.error) return authCheck.error
 
+    if (!authCheck.user) {
+      return addCorsHeaders(NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      ))
+    }
+
     const where: any = {}
     
     // If user is admin, they can see all messages
     // Otherwise, only their own messages
-    if (!authCheck.user!.isAdmin) {
-      where.userId = authCheck.user!.id
+    if (!authCheck.user.isAdmin) {
+      where.userId = authCheck.user.id
+      // Filter out messages deleted for user
+      where.deletedForUser = false
+    } else {
+      // Admin can see all messages except those deleted for everyone
+      where.deletedForEveryone = false
     }
 
     if (isRead === 'true') {
@@ -52,27 +64,34 @@ export async function GET(request: NextRequest) {
       where.isRead = false
     }
 
-    const [messages, total] = await Promise.all([
-      prisma.userMessage.findMany({
-        where,
-        skip,
-        take: limit,
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
+    let messages, total
+    try {
+      [messages, total] = await Promise.all([
+        prisma.userMessage.findMany({
+          where,
+          skip,
+          take: limit,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      }),
-      prisma.userMessage.count({ where }),
-    ])
+          orderBy: {
+            createdAt: 'desc',
+          },
+        }),
+        prisma.userMessage.count({ where }),
+      ])
+    } catch (dbError: any) {
+      console.error('Database query error:', dbError)
+      console.error('Query details:', { where, skip, take: limit })
+      throw dbError
+    }
 
     const response = NextResponse.json(
       {
@@ -90,10 +109,16 @@ export async function GET(request: NextRequest) {
     return addCorsHeaders(response)
   } catch (error: any) {
     console.error('Get messages error:', error)
+    console.error('Error stack:', error?.stack)
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+    })
     return addCorsHeaders(NextResponse.json(
       { 
         error: 'Internal server error', 
-        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred'
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while fetching messages'
       },
       { status: 500 }
     ))

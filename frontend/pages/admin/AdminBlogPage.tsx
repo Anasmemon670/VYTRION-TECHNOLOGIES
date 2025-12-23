@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
-import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { useState, useEffect, useRef } from "react";
 import { AdminLayout } from "../../components/admin/AdminLayout";
-import { Edit, Trash2, Plus, X, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, X, Upload, Image as ImageIcon, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { blogAPI } from "@/lib/api";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
@@ -21,13 +21,15 @@ interface BlogPost {
 
 export function AdminBlogPage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<BlogPost | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
@@ -36,6 +38,7 @@ export function AdminBlogPage() {
     published: false
   });
   const [imagePreview, setImagePreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch blogs
   useEffect(() => {
@@ -68,7 +71,7 @@ export function AdminBlogPage() {
     setEditingBlog(blog);
     setFormData({
       title: blog.title,
-      excerpt: blog.excerpt || "",
+      excerpt: blog.excerpt || blog.content || "",
       content: blog.content,
       featuredImage: blog.featuredImage || "",
       published: blog.published
@@ -82,9 +85,41 @@ export function AdminBlogPage() {
     setImagePreview(url);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageUrl = event.target?.result as string;
+        setFormData({ ...formData, featuredImage: imageUrl });
+        setImagePreview(imageUrl);
+      };
+      reader.onerror = () => {
+        alert('Error reading file. Please try again.');
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
-      alert("Please fill in title and content!");
+    if (!formData.title.trim() || !formData.excerpt.trim()) {
+      alert("Please fill in title and excerpt!");
       return;
     }
 
@@ -95,25 +130,28 @@ export function AdminBlogPage() {
         const response = await blogAPI.update(editingBlog.id, {
           title: formData.title,
           excerpt: formData.excerpt || null,
-          content: formData.content,
+          content: formData.excerpt || "",
           featuredImage: formData.featuredImage || null,
           published: formData.published
         });
         setBlogs(blogs.map(b => b.id === editingBlog.id ? response.post : b));
-        alert("Blog post updated successfully!");
+        setSuccessMessage("Blog post updated successfully!");
+        setShowSuccessModal(true);
+        setShowEditModal(false);
       } else {
         // Create new blog
         const response = await blogAPI.create({
           title: formData.title,
           excerpt: formData.excerpt || undefined,
-          content: formData.content,
+          content: formData.excerpt || "",
           featuredImage: formData.featuredImage || undefined,
           published: formData.published
         });
         setBlogs([response.post, ...blogs]);
-        alert("Blog post created successfully!");
+        setSuccessMessage("Blog post created successfully!");
+        setShowSuccessModal(true);
+        setShowEditModal(false);
       }
-      setShowEditModal(false);
     } catch (err: any) {
       console.error('Error saving blog:', err);
       alert(err.response?.data?.error || 'Failed to save blog post');
@@ -122,13 +160,17 @@ export function AdminBlogPage() {
     }
   };
 
+  const handleDeleteCancel = () => {
+    setDeleteConfirm(null);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
 
     try {
       setDeleting(true);
-      await blogAPI.delete(deleteConfirm);
-      setBlogs(blogs.filter(b => b.id !== deleteConfirm));
+      await blogAPI.delete(deleteConfirm.id);
+      setBlogs(blogs.filter(b => b.id !== deleteConfirm.id));
       setDeleteConfirm(null);
     } catch (err: any) {
       console.error('Error deleting blog:', err);
@@ -230,32 +272,13 @@ export function AdminBlogPage() {
                   >
                     <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  {deleteConfirm === blog.id ? (
-                    <>
-                      <button 
-                        onClick={handleDeleteConfirm}
-                        disabled={deleting}
-                        className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm flex items-center gap-2"
-                      >
-                        {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
-                      </button>
-                      <button 
-                        onClick={() => setDeleteConfirm(null)}
-                        disabled={deleting}
-                        className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-300 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-all text-xs lg:text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={() => setDeleteConfirm(blog.id)}
-                      disabled={deleting}
-                      className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-2 lg:p-3 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => setDeleteConfirm(blog)}
+                    disabled={deleting}
+                    className="bg-red-500 hover:bg-red-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white p-2 lg:p-3 rounded-lg transition-all"
+                  >
+                    <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -281,7 +304,7 @@ export function AdminBlogPage() {
                   className="bg-slate-700 text-white px-4 py-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 />
                 <textarea
-                  placeholder="Excerpt (optional)"
+                  placeholder="Excerpt *"
                   value={formData.excerpt}
                   onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
                   className="bg-slate-700 text-white px-4 py-3 rounded-lg w-full h-24 focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -296,17 +319,10 @@ export function AdminBlogPage() {
                   />
                   <label htmlFor="published" className="text-white">Published</label>
                 </div>
-                <textarea
-                  placeholder="Full Content (HTML supported)"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  className="bg-slate-700 text-white px-4 py-3 rounded-lg w-full h-40 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono text-sm"
-                />
-                <p className="text-slate-400 text-xs">You can use HTML tags like &lt;p&gt;, &lt;h2&gt;, &lt;ul&gt;, etc.</p>
 
                 {/* Image Upload Section - Separate Field */}
                 <div className="space-y-2">
-                  <label className="text-white text-sm font-medium">Featured Image (optional)</label>
+                  <label className="text-white text-sm font-medium">Featured Image *</label>
 
                   {/* Image Preview */}
                   {imagePreview && (
@@ -329,7 +345,32 @@ export function AdminBlogPage() {
                       className="bg-slate-700 text-white px-4 py-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     />
                   </div>
-                  <p className="text-slate-400 text-xs">Paste an image URL for the featured image.</p>
+                  
+                  {/* Divider */}
+                  <div className="flex items-center gap-2 my-2">
+                    <div className="flex-1 h-px bg-slate-600"></div>
+                    <span className="text-slate-400 text-xs">OR</span>
+                    <div className="flex-1 h-px bg-slate-600"></div>
+                  </div>
+
+                  {/* File Upload */}
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Upload className="w-5 h-5" />
+                      Upload Image
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4 mt-6">
@@ -356,6 +397,101 @@ export function AdminBlogPage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* DELETE CONFIRMATION MODAL */}
+        <AnimatePresence>
+          {deleteConfirm && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 sm:p-6 max-w-md w-full border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto"
+              >
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
+                  </div>
+                  <h2 className="text-white text-lg sm:text-xl font-semibold">Delete Blog Post</h2>
+                </div>
+                <button
+                  onClick={handleDeleteCancel}
+                  className="text-slate-400 hover:text-white transition-colors flex-shrink-0 p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-slate-300 text-sm sm:text-base mb-2">
+                Are you sure you want to delete this blog post?
+              </p>
+              <p className="text-white font-semibold mb-4 sm:mb-6 break-words">
+                "{deleteConfirm.title}"
+              </p>
+              <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">
+                This action cannot be undone.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="flex-1 px-6 py-3 bg-slate-700/80 hover:bg-slate-600 text-white rounded-xl transition-all duration-200 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl border border-slate-600 hover:border-slate-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                  className="flex-1 px-6 py-3 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl hover:shadow-red-500/30 border border-red-600 hover:border-red-500"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span>Delete Blog</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* SUCCESS MODAL */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 border border-slate-700 shadow-2xl max-w-md w-full mx-4"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 p-3 bg-green-500/20 rounded-full">
+                  <CheckCircle className="w-12 h-12 text-green-500" />
+                </div>
+                <h3 className="text-white text-xl font-semibold mb-2">
+                  Success!
+                </h3>
+                <p className="text-slate-300 text-sm mb-6">
+                  {successMessage}
+                </p>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition-colors"
+                >
+                  OK
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </div>

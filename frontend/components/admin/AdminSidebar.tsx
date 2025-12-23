@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -11,12 +12,15 @@ import {
   Wrench,
   ShoppingCart,
   Mail,
-  X
+  X,
+  Tag
 } from "lucide-react";
+import { contactAPI } from "@/lib/api";
 
 const navItems = [
   { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
   { name: "Products", path: "/admin/products", icon: Package },
+  { name: "Categories", path: "/admin/categories", icon: Tag },
   { name: "Orders", path: "/admin/orders", icon: ShoppingCart },
   { name: "Blog", path: "/admin/blog", icon: FileText },
   { name: "Projects", path: "/admin/projects", icon: Briefcase },
@@ -31,6 +35,24 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await contactAPI.getAll({ limit: 100 });
+        const unread = (response.messages || []).filter((m: any) => !m.isRead && !m.archived).length;
+        setUnreadCount(unread);
+      } catch (err) {
+        console.error('Error fetching unread count:', err);
+      }
+    };
+
+    fetchUnreadCount();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <>
@@ -45,13 +67,20 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${isActive
                   ? "bg-cyan-500 text-white"
                   : "text-slate-300 hover:bg-slate-700 hover:text-white"
                   }`}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
+                <div className="flex items-center gap-3">
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </div>
+                {item.path === "/admin/contact-messages" && unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -97,13 +126,20 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
                       key={item.path}
                       href={item.path}
                       onClick={onClose}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                      className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all ${isActive
                         ? "bg-cyan-500 text-white"
                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                         }`}
                     >
-                      <Icon className="w-5 h-5" />
-                      <span>{item.name}</span>
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-5 h-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      {item.path === "/admin/contact-messages" && unreadCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
