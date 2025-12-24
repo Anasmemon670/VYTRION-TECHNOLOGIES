@@ -778,7 +778,7 @@ export function AdminContactMessagesPage() {
 
       {/* Reply Modal */}
       {showReplyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-xl p-8 w-96">
             <h2 className="text-white text-xl mb-4">Reply to {selectedMessage?.name}</h2>
             <div className="mb-4">

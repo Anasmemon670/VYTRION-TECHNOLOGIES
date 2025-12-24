@@ -149,24 +149,44 @@ export function AdminDashboard() {
         )}
 
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
-            <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
-              <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Revenue</p>
-              <p className="text-white text-xl sm:text-2xl font-bold break-words">${parseFloat(stats.totalRevenue || '0').toFixed(2)}</p>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Revenue</p>
+                <p className="text-white text-xl sm:text-2xl font-bold break-words">${parseFloat(stats.totalRevenue || '0').toFixed(2)}</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Users</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.totalUsers || 0}</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Orders</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.totalOrders || 0}</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Pending Returns</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.pendingReturns || 0}</p>
+              </div>
             </div>
-            <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
-              <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Users</p>
-              <p className="text-white text-xl sm:text-2xl font-bold">{stats.totalUsers || 0}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Processed Orders</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.processedOrders || 0}</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Shipped Orders</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.shippedOrders || 0}</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Delivered Orders</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.deliveredOrders || 0}</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
+                <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Cancelled Orders</p>
+                <p className="text-white text-xl sm:text-2xl font-bold">{stats.cancelledOrders || 0}</p>
+              </div>
             </div>
-            <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
-              <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Orders</p>
-              <p className="text-white text-xl sm:text-2xl font-bold">{stats.totalOrders || 0}</p>
-            </div>
-            <div className="bg-slate-800 rounded-xl p-4 sm:p-5 md:p-6 border border-slate-700">
-              <p className="text-slate-400 text-xs sm:text-sm mb-1 sm:mb-2">Pending Returns</p>
-              <p className="text-white text-xl sm:text-2xl font-bold">{stats.pendingReturns || 0}</p>
-            </div>
-          </div>
+          </>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">

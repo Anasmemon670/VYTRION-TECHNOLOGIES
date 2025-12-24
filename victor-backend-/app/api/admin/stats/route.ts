@@ -121,6 +121,12 @@ export async function GET(request: NextRequest) {
       where: dateFilter,
     })
 
+    // Extract individual order status counts
+    const statusCounts = orderStatusBreakdown.reduce((acc: any, item) => {
+      acc[item.status] = item._count.id
+      return acc
+    }, {})
+
     // Get revenue by month (last 6 months)
     const sixMonthsAgo = new Date()
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
@@ -158,6 +164,10 @@ export async function GET(request: NextRequest) {
           totalProducts,
           totalRevenue: totalRevenue._sum.totalAmount?.toString() || '0',
           pendingReturns,
+          processedOrders: statusCounts['PROCESSED'] || 0,
+          shippedOrders: statusCounts['SHIPPED'] || 0,
+          deliveredOrders: statusCounts['DELIVERED'] || 0,
+          cancelledOrders: statusCounts['CANCELLED'] || 0,
           orderStatusBreakdown: orderStatusBreakdown.map((item) => ({
             status: item.status,
             count: item._count.id,
