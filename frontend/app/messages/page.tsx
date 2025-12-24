@@ -405,7 +405,7 @@ export default function MessagesPage() {
                 
                 if (remainingMessages.length > 0) {
                     // Select the latest remaining message in the thread
-                    const latestMessage = remainingMessages.sort((a, b) => 
+                    const latestMessage = remainingMessages.sort((a: Message, b: Message) => 
                         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     )[0];
                     setSelectedMessage(latestMessage);
