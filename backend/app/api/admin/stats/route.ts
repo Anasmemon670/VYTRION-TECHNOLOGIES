@@ -147,8 +147,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Group by month
-    type MonthlyRevenueItem = { totalAmount: number; createdAt: Date }
-    const revenueByMonth = monthlyRevenue.reduce((acc: Record<string, number>, order: MonthlyRevenueItem) => {
+    const revenueByMonth = monthlyRevenue.reduce((acc: Record<string, number>, order) => {
       const month = new Date(order.createdAt).toISOString().slice(0, 7) // YYYY-MM
       if (!acc[month]) {
         acc[month] = 0
