@@ -371,7 +371,9 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       console.error('Order validation error:', error.errors)
-      console.error('Received body:', JSON.stringify(body, null, 2))
+      if (typeof body !== 'undefined') {
+        console.error('Received body:', JSON.stringify(body, null, 2))
+      }
       
       // Create user-friendly error messages
       const errorMessages = error.errors.map((err) => {
