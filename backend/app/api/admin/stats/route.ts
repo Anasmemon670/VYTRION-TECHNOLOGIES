@@ -147,14 +147,15 @@ export async function GET(request: NextRequest) {
     })
 
     // Group by month
-    const revenueByMonth = monthlyRevenue.reduce((acc: any, order: { totalAmount: number; createdAt: Date }) => {
+    type MonthlyRevenueItem = { totalAmount: number; createdAt: Date }
+    const revenueByMonth = monthlyRevenue.reduce((acc: Record<string, number>, order: MonthlyRevenueItem) => {
       const month = new Date(order.createdAt).toISOString().slice(0, 7) // YYYY-MM
       if (!acc[month]) {
         acc[month] = 0
       }
       acc[month] += Number(order.totalAmount)
       return acc
-    }, {})
+    }, {} as Record<string, number>)
 
     const response = NextResponse.json(
       {
