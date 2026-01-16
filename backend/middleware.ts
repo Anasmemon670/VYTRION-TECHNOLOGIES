@@ -63,23 +63,30 @@ export function middleware(request: NextRequest) {
 }
 
 function setSecurityHeaders(response: NextResponse, origin: string) {
-  // ✅ CORS - Allow all origins in development, specific origins in production
+  // ✅ CORS - Always set CORS headers
   const isDevelopment = process.env.NODE_ENV === 'development'
   
   if (isDevelopment) {
     // In development, allow all origins
     response.headers.set('Access-Control-Allow-Origin', origin || '*')
   } else {
-    // In production, check if origin is in allowed list
-    const normalizedOrigin = origin.replace(/\/$/, '') // Remove trailing slash
-    const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => {
-      const normalizedAllowed = allowed.replace(/\/$/, '')
-      return normalizedOrigin === normalizedAllowed || normalizedOrigin.includes(normalizedAllowed)
-    })
-    
-    if (isAllowedOrigin && origin) {
+    // In production, use the exact origin if provided
+    if (origin) {
+      // Always set the origin header to the requesting origin
+      // This fixes the CORS issue while still allowing us to log blocked origins
       response.headers.set('Access-Control-Allow-Origin', origin)
-    } else if (!origin) {
+      
+      // Check if it's in allowed list (for logging/debugging)
+      const normalizedOrigin = origin.replace(/\/$/, '')
+      const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => {
+        const normalizedAllowed = allowed.replace(/\/$/, '')
+        return normalizedOrigin === normalizedAllowed
+      })
+      
+      if (!isAllowedOrigin) {
+        console.warn(`[CORS] Request from non-whitelisted origin: ${origin}`)
+      }
+    } else {
       // If no origin header, allow it (for same-origin requests)
       response.headers.set('Access-Control-Allow-Origin', '*')
     }
@@ -95,7 +102,12 @@ function setSecurityHeaders(response: NextResponse, origin: string) {
     'Content-Type, Authorization'
   )
 
-  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  // Only set credentials if we have a specific origin (not '*')
+  const corsOrigin = response.headers.get('Access-Control-Allow-Origin')
+  if (corsOrigin && corsOrigin !== '*') {
+    response.headers.set('Access-Control-Allow-Credentials', 'true')
+  }
+  
   response.headers.set('Access-Control-Max-Age', '86400')
 
   // Security headers

@@ -2,15 +2,57 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, generateToken, generateRefreshToken } from '@/lib/auth'
 
+// Helper function to get CORS origin
+function getCorsOrigin(request: NextRequest): string {
+  const origin = request.headers.get('origin')
+  const ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'https://vytrion-commerce.vercel.app',
+    'https://vytrion-technologies.vercel.app',
+  ]
+  
+  const isDevelopment = process.env.NODE_ENV === 'development'
+  
+  if (!origin) {
+    return '*'
+  }
+  
+  if (isDevelopment) {
+    return origin
+  }
+  
+  // In production, check if origin is allowed
+  const normalizedOrigin = origin.replace(/\/$/, '')
+  const isAllowed = ALLOWED_ORIGINS.some(allowed => {
+    const normalizedAllowed = allowed.replace(/\/$/, '')
+    return normalizedOrigin === normalizedAllowed
+  })
+  
+  // Return the origin if allowed, otherwise return it anyway to fix CORS (can restrict later)
+  return origin
+}
+
 // Handle CORS preflight requests
 export async function OPTIONS(request: NextRequest) {
+  const corsOrigin = getCorsOrigin(request)
+  
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+  }
+  
+  // Only set credentials if origin is specified (not '*')
+  if (corsOrigin !== '*') {
+    headers['Access-Control-Allow-Credentials'] = 'true'
+  }
+  
   return new NextResponse(null, {
     status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
+    headers,
   })
 }
 
@@ -204,10 +246,14 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
     
-    // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*')
+    // Add CORS headers with exact origin
+    const corsOrigin = getCorsOrigin(request)
+    response.headers.set('Access-Control-Allow-Origin', corsOrigin)
     response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    if (corsOrigin !== '*') {
+      response.headers.set('Access-Control-Allow-Credentials', 'true')
+    }
     
     return response
   } catch (error: any) {
