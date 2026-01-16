@@ -278,8 +278,6 @@ export function StripePaymentForm({
         <PaymentElement
           options={{
             layout: "tabs",
-            // CRITICAL: Only allow card payments - disable link, apple_pay, amazon_pay, etc.
-            paymentMethodTypes: ["card"],
             fields: {
               billingDetails: "auto",
             },

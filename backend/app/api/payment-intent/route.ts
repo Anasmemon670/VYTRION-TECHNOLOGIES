@@ -144,9 +144,8 @@ export async function POST(request: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: currency,
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      // Only allow card payments (no link, apple_pay, google_pay, etc.)
+      payment_method_types: ['card'],
       metadata: {
         orderId: order.id,
         orderNumber: order.orderNumber,
