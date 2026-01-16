@@ -347,16 +347,20 @@ export async function POST(request: NextRequest) {
           totalAmount: orderToReturn.totalAmount.toString(),
           subOrders: orderToReturn.subOrders?.map((so) => ({
             ...so,
-            items: so.items?.map((item) => ({
-              ...item,
-              unitPrice: item.unitPrice.toString(),
-              product: item.product
-                ? {
-                    ...item.product,
-                    price: item.product.price.toString(),
-                  }
-                : null,
-            })),
+            items: so.items?.map((item: any) => {
+              const itemData: any = {
+                ...item,
+                unitPrice: item.unitPrice.toString(),
+              }
+              // Only include product if it exists (from fullOrder query)
+              if (item.product) {
+                itemData.product = {
+                  ...item.product,
+                  price: item.product.price.toString(),
+                }
+              }
+              return itemData
+            }),
           })),
         },
       },
