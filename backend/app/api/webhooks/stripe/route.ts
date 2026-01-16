@@ -18,12 +18,12 @@ export async function OPTIONS(request: NextRequest) {
 async function findOrderByStripeEvent(
   orderId?: string,
   paymentIntentId?: string
-): Promise<{ id: string; status: string; orderNumber: string } | null> {
+): Promise<{ id: string; status: string; orderNumber: string; stripePaymentIntentId: string | null } | null> {
   // Try by paymentIntentId first (most direct for PaymentIntents)
   if (paymentIntentId) {
     const order = await prisma.order.findFirst({
       where: { stripePaymentIntentId: paymentIntentId },
-      select: { id: true, status: true, orderNumber: true },
+      select: { id: true, status: true, orderNumber: true, stripePaymentIntentId: true },
     })
     if (order) {
       console.log(`[Webhook] Found order ${order.id} by stripePaymentIntentId: ${paymentIntentId}`)
@@ -35,7 +35,7 @@ async function findOrderByStripeEvent(
   if (orderId) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, status: true, orderNumber: true },
+      select: { id: true, status: true, orderNumber: true, stripePaymentIntentId: true },
     })
     if (order) {
       console.log(`[Webhook] Found order ${order.id} by orderId: ${orderId}`)

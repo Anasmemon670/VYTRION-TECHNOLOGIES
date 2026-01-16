@@ -143,12 +143,12 @@ export async function GET(request: NextRequest) {
 
 // POST /api/orders - Create order
 export async function POST(request: NextRequest) {
+  let body: any
   try {
     const authCheck = await requireAuth(request)
     if (authCheck.error) return authCheck.error
 
     const currentUser = authCheck.user!
-    let body
     try {
       body = await request.json()
     } catch (parseError) {
