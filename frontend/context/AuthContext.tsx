@@ -65,58 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (token && savedUser) {
           try {
-            // Verify token is still valid by fetching profile
             const response = await authAPI.getProfile();
             if (response && response.user) {
               setUser(response.user);
               localStorage.setItem("user", JSON.stringify(response.user));
             } else {
-              // Token invalid, clear everything
               clearAuth();
             }
-          } catch (error) {
-            // Token expired or invalid, clear everything silently
-            // Don't clear if it's a network error - might be backend not running
-            console.error("Auth initialization error:", error);
-            // Only clear if it's an auth error (401/403), not network errors or rate limiting
-            if (error && typeof error === 'object' && 'response' in error) {
-              const axiosError = error as any;
-              const status = axiosError.response?.status;
-              if (status === 401 || status === 403) {
-                clearAuth();
-              } else if (status === 429) {
-                // Rate limited - use saved user data, don't clear
-                try {
-                  const parsedUser = JSON.parse(savedUser);
-                  setUser(parsedUser);
-                } catch {
-                  // Invalid saved user, clear
-                  clearAuth();
-                }
-              } else {
-                // Network error or other - keep saved user data
-                try {
-                  const parsedUser = JSON.parse(savedUser);
-                  setUser(parsedUser);
-                } catch {
-                  clearAuth();
-                }
-              }
-            } else {
-              // Network error - keep saved user data
-              try {
-                const parsedUser = JSON.parse(savedUser);
-                setUser(parsedUser);
-              } catch {
-                clearAuth();
-              }
-            }
+          } catch (err) {
+            clearAuth();
           }
         } else {
           setUser(null);
         }
       } catch (err) {
-        // Fallback: if anything fails, just set loading to false
         console.error("Auth init error:", err);
         setUser(null);
       } finally {

@@ -127,13 +127,10 @@ export function Header() {
 
       try {
         const response = await messagesAPI.getAll({ limit: 50 });
-        setMessages(response.messages || []);
+        setMessages(response?.messages || []);
       } catch (err: any) {
         // Silently fail for header - don't show errors to user
-        // Only log if it's not a 401 (unauthorized) which is expected when logged out
-        if (err.response?.status !== 401) {
-          console.error('Error fetching messages in header:', err);
-        }
+        // API wrapper already handles errors, but just in case
         setMessages([]);
       }
     };

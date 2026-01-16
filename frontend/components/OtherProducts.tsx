@@ -34,8 +34,9 @@ export function OtherProducts() {
       try {
         setLoading(true);
         const response = await productsAPI.getAll({ limit: 12 });
-        setProducts(response.products || []);
-      } catch (err) {
+        setProducts(response?.products || []);
+      } catch (err: any) {
+        // Silently handle errors - don't show to user
         console.error('Error fetching products:', err);
         setProducts([]);
       } finally {

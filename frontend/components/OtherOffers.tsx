@@ -22,9 +22,10 @@ export function OtherOffers() {
         setLoading(true);
         const response = await productsAPI.getAll({ limit: 5 });
         // Filter products with discount > 20%
-        const discountedProducts = (response.products || []).filter((p: any) => p.discount && p.discount > 20);
-        setOffers(discountedProducts);
-      } catch (err) {
+        const discountedProducts = (response?.products || []).filter((p: any) => p.discount && p.discount > 20);
+        setOffers(discountedProducts || []);
+      } catch (err: any) {
+        // Silently handle errors - don't show to user
         console.error('Error fetching offers:', err);
         setOffers([]);
       } finally {

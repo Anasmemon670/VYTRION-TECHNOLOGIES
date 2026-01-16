@@ -16,7 +16,9 @@ import {
   Plus,
   Minus
 } from "lucide-react";
-import { productsAPI, ordersAPI, wishlistAPI } from "@/lib/api";
+import { productsAPI, ordersAPI, wishlistAPI, paymentIntentAPI } from "@/lib/api";
+import { StripeProvider } from "@/components/StripeProvider";
+import { StripePaymentForm } from "@/components/StripePaymentForm";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -49,6 +51,10 @@ export default function ProductDetailPage() {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [processingBuy, setProcessingBuy] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const [orderAmount, setOrderAmount] = useState<number>(0);
 
   const [isInWishlist, setIsInWishlist] = useState(false);
 
@@ -110,9 +116,16 @@ export default function ProductDetailPage() {
       : ["/images/products/headphones.png"];
 
   const price = parseFloat(product.price);
-  const inStock = product.stock > 0;
+  // Handle stock as both string and number
+  const stockValue = typeof product.stock === 'string' ? parseInt(product.stock) : Number(product.stock) || 0;
+  const inStock = stockValue > 0;
 
   const handleAddToCart = () => {
+    if (!inStock) {
+      toast.error("Product is out of stock");
+      return;
+    }
+    console.log('Add to Cart clicked', { productId: product.id, quantity, inStock });
     for (let i = 0; i < quantity; i++) {
       addToCart({
         id: product.id,
@@ -147,27 +160,152 @@ export default function ProductDetailPage() {
   };
 
   const handleBuyNow = () => {
+    if (!inStock) {
+      toast.error("Product is out of stock");
+      return;
+    }
     if (!user) {
       router.push("/login");
       return;
     }
+    console.log('Buy Now clicked', { productId: product.id, quantity, inStock });
     setShowBuyModal(true);
   };
 
   const handleSubmitBuy = async () => {
+    // Validate shipping info
+    if (!shippingInfo.fullName?.trim() || !shippingInfo.address?.trim() || !shippingInfo.city?.trim() || !shippingInfo.zipCode?.trim() || !shippingInfo.country?.trim()) {
+      setBuyError('Please fill in all shipping information');
+      toast.error('Please fill in all shipping information');
+      return;
+    }
+
+    // Use shipping info for billing if billing not filled
+    const finalBillingInfo = billingInfo.fullName?.trim() ? billingInfo : shippingInfo;
+
+    // Validate billing info
+    if (!finalBillingInfo.fullName?.trim() || !finalBillingInfo.address?.trim() || !finalBillingInfo.city?.trim() || !finalBillingInfo.zipCode?.trim() || !finalBillingInfo.country?.trim()) {
+      setBuyError('Please fill in all billing information');
+      toast.error('Please fill in all billing information');
+      return;
+    }
+
     try {
       setProcessingBuy(true);
-      await ordersAPI.create({
+      setBuyError(null);
+
+      // Show loading toast
+      toast.loading('Creating your order...', { id: 'buy-order' });
+
+      // Create order
+      const orderResponse = await ordersAPI.create({
         items: [{ productId: product.id, quantity }],
-        shippingAddress: shippingInfo,
-        billingAddress: billingInfo.fullName ? billingInfo : shippingInfo
+        shippingAddress: {
+          fullName: shippingInfo.fullName.trim(),
+          address: shippingInfo.address.trim(),
+          city: shippingInfo.city.trim(),
+          zipCode: shippingInfo.zipCode.trim(),
+          country: shippingInfo.country.trim(),
+          ...(shippingInfo.phone?.trim() && { phone: shippingInfo.phone.trim() })
+        },
+        billingAddress: {
+          fullName: finalBillingInfo.fullName.trim(),
+          address: finalBillingInfo.address.trim(),
+          city: finalBillingInfo.city.trim(),
+          zipCode: finalBillingInfo.zipCode.trim(),
+          country: finalBillingInfo.country.trim(),
+          ...(finalBillingInfo.phone?.trim() && { phone: finalBillingInfo.phone.trim() })
+        }
       });
-      toast.success("Order placed successfully");
-      setShowBuyModal(false);
-      router.push("/orders");
-    } catch {
-      toast.error("Order failed");
-    } finally {
+
+      const orderId = orderResponse.order.id;
+      const orderNumber = orderResponse.order.orderNumber || orderId;
+
+      // Show success message
+      toast.success(`Order #${orderNumber} created successfully!`, { id: 'buy-order' });
+
+      // Create Stripe Payment Intent
+      toast.loading('Setting up secure payment...', { id: 'buy-order' });
+      
+      try {
+        console.log('Creating Stripe payment intent for order:', orderId);
+        const paymentIntentResponse = await paymentIntentAPI.create(orderId);
+        console.log('Payment intent response received:', paymentIntentResponse);
+        
+        // Check if Stripe is not configured
+        if (paymentIntentResponse.error && paymentIntentResponse.code === 'STRIPE_NOT_CONFIGURED') {
+          console.error('Stripe not configured error:', paymentIntentResponse);
+          toast.dismiss('buy-order');
+          toast.error('Payment gateway not configured. Please contact support.');
+          setBuyError('Payment gateway is not configured. Please set STRIPE_SECRET_KEY in backend environment variables.');
+          setProcessingBuy(false);
+          return;
+        }
+
+        // Check if response has error
+        if (paymentIntentResponse.error) {
+          console.error('Payment intent error in response:', paymentIntentResponse);
+          throw new Error(paymentIntentResponse.error || 'Failed to create payment intent');
+        }
+
+        // Show payment form
+        if (paymentIntentResponse.clientSecret) {
+          console.log('Payment intent created, showing payment form');
+          toast.dismiss('buy-order');
+          setClientSecret(paymentIntentResponse.clientSecret);
+          setCurrentOrderId(orderId);
+          setOrderAmount(price * quantity + 10); // Total with shipping
+          setShowPaymentForm(true);
+          setProcessingBuy(false);
+        } else {
+          console.error('No client secret in response:', paymentIntentResponse);
+          throw new Error('No client secret received from payment gateway');
+        }
+      } catch (paymentErr: any) {
+        console.error('Stripe payment intent error:', paymentErr);
+        console.error('Error response:', paymentErr.response?.data);
+        console.error('Error status:', paymentErr.response?.status);
+        
+        // Handle Stripe not configured error
+        if (paymentErr.response?.data?.code === 'STRIPE_NOT_CONFIGURED' || 
+            paymentErr.response?.data?.error?.includes('not configured') ||
+            paymentErr.response?.data?.error?.includes('Payment service not configured')) {
+          toast.dismiss('buy-order');
+          toast.error('Payment gateway not configured');
+          setBuyError('Payment gateway is not configured. Please set STRIPE_SECRET_KEY in backend environment variables.');
+        } else if (paymentErr.response?.data?.error) {
+          // Show specific error from backend
+          toast.dismiss('buy-order');
+          toast.error(paymentErr.response.data.error);
+          setBuyError(paymentErr.response.data.error + (paymentErr.response.data.details ? ': ' + paymentErr.response.data.details : ''));
+        } else {
+          throw paymentErr; // Re-throw to be caught by outer catch
+        }
+        setProcessingBuy(false);
+        return;
+      }
+    } catch (err: any) {
+      console.error('Order creation error:', err);
+      console.error('Error response:', err.response?.data);
+      
+      toast.dismiss('buy-order');
+      
+      // Handle specific error cases
+      let errorMessage = 'Failed to process order. Please try again.';
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+        if (err.response.data.details) {
+          errorMessage += `: ${err.response.data.details}`;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage, { duration: 5000 });
+      setBuyError(errorMessage);
       setProcessingBuy(false);
     }
   };
@@ -312,17 +450,17 @@ export default function ProductDetailPage() {
                     <input
                       type="number"
                       min="1"
-                      max={product.stock}
+                      max={stockValue}
                       value={quantity}
                       onChange={(e) => {
                         const val = parseInt(e.target.value) || 1;
-                        setQuantity(Math.max(1, Math.min(val, product.stock)));
+                        setQuantity(Math.max(1, Math.min(val, stockValue)));
                       }}
                       className="w-16 text-center border-x border-slate-300 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     />
                     <button
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      disabled={quantity >= product.stock}
+                      onClick={() => setQuantity(Math.min(stockValue, quantity + 1))}
+                      disabled={quantity >= stockValue || !inStock}
                       className="px-4 py-2 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-r-lg"
                     >
                       <Plus className="w-4 h-4" />
@@ -333,18 +471,28 @@ export default function ProductDetailPage() {
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3 mb-8">
                   <button
-                    onClick={handleAddToCart}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAddToCart();
+                    }}
                     disabled={!inStock}
-                    className="flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg transition-all font-medium flex-1"
+                    className="flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg transition-all font-medium flex-1 cursor-pointer"
+                    type="button"
                   >
                     <ShoppingCart className="w-5 h-5" />
                     Add to Cart
                   </button>
 
                   <button
-                    onClick={handleBuyNow}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleBuyNow();
+                    }}
                     disabled={!inStock}
-                    className="bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg transition-all font-medium"
+                    className="bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg transition-all font-medium cursor-pointer"
+                    type="button"
                   >
                     Buy Now
                   </button>
@@ -553,30 +701,105 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-slate-200">
-                <button
-                  onClick={handleSubmitBuy}
-                  disabled={processingBuy || !shippingInfo.fullName || !shippingInfo.address || !shippingInfo.city || !shippingInfo.zipCode || !shippingInfo.country}
-                  className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-3 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
-                >
-                  {processingBuy ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Place Order'
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowBuyModal(false)}
-                  disabled={processingBuy}
-                  className="px-6 py-3 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-700 rounded-lg transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
+              {/* Payment Form (Stripe Elements) */}
+              {showPaymentForm && clientSecret && currentOrderId && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? (
+                <div className="pt-4 border-t border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Payment Information</h3>
+                  <StripeProvider clientSecret={clientSecret}>
+                    <StripePaymentForm
+                      clientSecret={clientSecret}
+                      orderId={currentOrderId}
+                      amount={orderAmount}
+                      onSuccess={() => {
+                        toast.success("Payment successful! Redirecting...");
+                        setTimeout(() => {
+                          router.push(`/orders/${currentOrderId}`);
+                        }, 1500);
+                      }}
+                      onError={(error) => {
+                        setBuyError(error);
+                      }}
+                      onRetry={async () => {
+                        // Create new PaymentIntent on retry
+                        if (!currentOrderId) return;
+                        try {
+                          console.log("[ProductDetail] Creating new PaymentIntent for retry...");
+                          const paymentIntentResponse = await paymentIntentAPI.create(currentOrderId);
+                          if (paymentIntentResponse.clientSecret) {
+                            setClientSecret(paymentIntentResponse.clientSecret);
+                            setBuyError(null);
+                            toast.success("New payment session created. Please try again.");
+                          }
+                        } catch (retryError: any) {
+                          console.error("[ProductDetail] Error creating new PaymentIntent:", retryError);
+                          setBuyError("Failed to create new payment session. Please refresh the page.");
+                        }
+                      }}
+                    />
+                  </StripeProvider>
+                  <button
+                    onClick={() => {
+                      setShowPaymentForm(false);
+                      setClientSecret(null);
+                      setCurrentOrderId(null);
+                    }}
+                    className="mt-4 w-full px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-all"
+                  >
+                    Back to Order Details
+                  </button>
+                </div>
+              ) : showPaymentForm && (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) ? (
+                <div className="pt-4 border-t border-slate-200">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-600 text-sm font-medium mb-2">
+                      Stripe Configuration Missing
+                    </p>
+                    <p className="text-red-600 text-xs">
+                      Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your frontend/.env.local file.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowPaymentForm(false);
+                        setClientSecret(null);
+                        setCurrentOrderId(null);
+                      }}
+                      className="mt-3 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Action Buttons */
+                <div className="flex gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={handleSubmitBuy}
+                    disabled={processingBuy || !shippingInfo.fullName || !shippingInfo.address || !shippingInfo.city || !shippingInfo.zipCode || !shippingInfo.country}
+                    className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-3 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
+                  >
+                    {processingBuy ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Place Order'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBuyModal(false);
+                      setShowPaymentForm(false);
+                      setClientSecret(null);
+                      setCurrentOrderId(null);
+                    }}
+                    disabled={processingBuy}
+                    className="px-6 py-3 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-700 rounded-lg transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

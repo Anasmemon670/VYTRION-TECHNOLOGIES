@@ -202,15 +202,15 @@ export function AdminBlogPage() {
     <AdminLayout>
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
-          <div>
-            <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Manage Blog</h1>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-white text-2xl sm:text-3xl">Manage Blog</h1>
             <p className="text-slate-400 text-sm sm:text-base">{blogs.length} blog posts</p>
           </div>
           <button
             onClick={handleAddNew}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+            className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Plus className="w-4 h-4" />
             <span>Add New Post</span>
           </button>
         </div>

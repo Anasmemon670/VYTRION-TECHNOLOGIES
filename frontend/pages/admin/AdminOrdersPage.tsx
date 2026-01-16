@@ -122,14 +122,14 @@ export function AdminOrdersPage() {
     <AdminLayout>
       <div>
         <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <div>
-            <h1 className="text-white text-2xl sm:text-3xl mb-1 sm:mb-2">Manage Orders</h1>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-white text-2xl sm:text-3xl">Manage Orders</h1>
             <p className="text-slate-400 text-sm sm:text-base">{orders.length} total orders</p>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+            className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto"
           >
             <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>

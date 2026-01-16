@@ -42,16 +42,20 @@ export function ProductsPage() {
           params.category = selectedCategory;
         }
         const response = await productsAPI.getAll(params);
-        setProducts(response.products || []);
+        const productsList = response?.products || [];
+        setProducts(productsList);
         
         // Extract unique categories
         const uniqueCategories = new Set<string>(["All"]);
-        response.products?.forEach((p: Product) => {
+        productsList.forEach((p: Product) => {
           if (p.category) uniqueCategories.add(p.category);
         });
         setCategories(Array.from(uniqueCategories));
       } catch (err: any) {
+        // API wrapper should handle errors, but just in case
         console.error('Error fetching products:', err);
+        setProducts([]);
+        setCategories(["All"]);
         setError(err.response?.data?.error || 'Failed to load products');
         setProducts([]);
       } finally {

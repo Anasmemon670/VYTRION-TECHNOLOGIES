@@ -44,6 +44,12 @@ api.interceptors.response.use(
 
     const originalRequest: any = error.config
 
+    // Don't retry /auth/me requests - let them fail gracefully
+    if (originalRequest?.url?.includes('/auth/me')) {
+      // Return a rejected promise that can be caught by the API wrapper
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
@@ -122,14 +128,46 @@ export const ordersAPI = {
     api.post('/orders', data).then(r => r.data),
   update: (id: string, data: any) =>
     api.put(`/orders/${id}`, data).then(r => r.data),
+  updateStatus: (id: string) =>
+    api.post(`/orders/${id}/update-status`).then(r => r.data),
 }
 
 // =======================
-// CHECKOUT API
+// CHECKOUT API (DEPRECATED - Use paymentIntentAPI instead)
 // =======================
+// NOTE: This API is deprecated. Use paymentIntentAPI for Stripe Elements integration.
+// Keeping for backward compatibility but should not be used in new code.
 export const checkoutAPI = {
-  createSession: (orderId: string) =>
-    api.post('/checkout', { orderId }).then(r => r.data),
+  createSession: (orderId: string) => {
+    console.warn('[DEPRECATED] checkoutAPI.createSession is deprecated. Use paymentIntentAPI.create instead.');
+    return api.post('/checkout', { orderId })
+      .then(r => {
+        console.log('Checkout session created:', r.data);
+        return r.data;
+      })
+      .catch(err => {
+        console.error('Checkout API error:', err);
+        console.error('Error response:', err.response?.data);
+        throw err; // Re-throw to be handled by caller
+      });
+  },
+}
+
+// =======================
+// PAYMENT INTENT API (for Stripe Elements)
+// =======================
+export const paymentIntentAPI = {
+  create: (orderId: string) =>
+    api.post('/payment-intent', { orderId })
+      .then(r => {
+        console.log('Payment intent created:', r.data);
+        return r.data;
+      })
+      .catch(err => {
+        console.error('Payment intent API error:', err);
+        console.error('Error response:', err.response?.data);
+        throw err; // Re-throw to be handled by caller
+      }),
 }
 
 // =======================

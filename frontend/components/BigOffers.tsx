@@ -33,8 +33,9 @@ export function BigOffers() {
       try {
         setLoading(true);
         const response = await productsAPI.getAll({ featured: true, limit: 8 });
-        setProducts(response.products || []);
-      } catch (err) {
+        setProducts(response?.products || []);
+      } catch (err: any) {
+        // Silently handle errors - don't show to user
         console.error('Error fetching featured products:', err);
         setProducts([]);
       } finally {

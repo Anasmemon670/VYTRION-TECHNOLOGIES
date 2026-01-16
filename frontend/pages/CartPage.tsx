@@ -1,17 +1,21 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Minus, Plus, Trash2, Loader2 } from "lucide-react";
+import { Minus, Plus, Trash2, Loader2, XCircle } from "lucide-react";
 import { useCart } from "../context/CartContext";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ordersAPI, checkoutAPI } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ordersAPI, paymentIntentAPI, productsAPI } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { StripeProvider } from "@/components/StripeProvider";
+import { StripePaymentForm } from "@/components/StripePaymentForm";
 
 export function CartPage() {
   const { cartItems, updateQuantity, removeFromCart, clearCart, getSubtotal } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [shippingInfo, setShippingInfo] = useState({
     fullName: '',
@@ -33,6 +37,18 @@ export function CartPage() {
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
+  // Check for canceled payment redirect
+  useEffect(() => {
+    const canceled = searchParams?.get("canceled");
+    if (canceled === "true") {
+      toast.error("Payment was canceled. You can try again when ready.");
+    }
+  }, [searchParams]);
 
   const shippingCost = 10.00;
   const subtotal = getSubtotal();
@@ -44,58 +60,206 @@ export function CartPage() {
       return;
     }
 
-    // Validate shipping info
-    if (!shippingInfo.fullName || !shippingInfo.address || !shippingInfo.city || !shippingInfo.zipCode || !shippingInfo.country) {
+    // Check if cart is empty
+    if (cartItems.length === 0) {
+      setError('Your cart is empty');
+      return;
+    }
+
+    // Validate shipping info - check for empty strings too
+    if (!shippingInfo.fullName?.trim() || !shippingInfo.address?.trim() || !shippingInfo.city?.trim() || !shippingInfo.zipCode?.trim() || !shippingInfo.country?.trim()) {
       setError('Please fill in all shipping information');
       return;
     }
 
     // Use shipping info for billing if billing not filled
-    const finalBillingInfo = billingInfo.fullName ? billingInfo : shippingInfo;
+    const finalBillingInfo = billingInfo.fullName?.trim() ? billingInfo : shippingInfo;
+
+    // Validate billing info
+    if (!finalBillingInfo.fullName?.trim() || !finalBillingInfo.address?.trim() || !finalBillingInfo.city?.trim() || !finalBillingInfo.zipCode?.trim() || !finalBillingInfo.country?.trim()) {
+      setError('Please fill in all billing information');
+      return;
+    }
 
     try {
       setProcessing(true);
       setError(null);
 
-      // Create order
+      // Show loading toast
+      toast.loading('Processing your order...', { id: 'checkout' });
+
+      // Check stock availability before creating order (parallel fetch for better performance)
+      const stockIssues: string[] = [];
+      
+      // Fetch all products in parallel
+      const productPromises = cartItems.map(async (cartItem) => {
+        try {
+          const productResponse = await productsAPI.getById(cartItem.id);
+          const product = productResponse.product || productResponse;
+          return { cartItem, product };
+        } catch (err) {
+          console.error(`Error checking stock for ${cartItem.name}:`, err);
+          return { cartItem, product: null };
+        }
+      });
+
+      const productResults = await Promise.all(productPromises);
+
+      // Check stock for each product
+      for (const { cartItem, product } of productResults) {
+        if (!product) {
+          stockIssues.push(`${cartItem.name}: Product not found`);
+          continue;
+        }
+        
+        const availableStock = Number(product.stock) || 0;
+        const requestedQuantity = cartItem.quantity;
+        
+        if (availableStock < requestedQuantity) {
+          stockIssues.push(`${cartItem.name}: Only ${availableStock} available, but ${requestedQuantity} requested`);
+        }
+      }
+
+      if (stockIssues.length > 0) {
+        toast.dismiss('checkout');
+        setError(`Insufficient stock: ${stockIssues.join('. ')}. Please update your cart quantities.`);
+        setProcessing(false);
+        return;
+      }
+
+      // Create order - ensure no empty strings are sent, trim all fields
+      toast.loading('Creating your order...', { id: 'checkout' });
+      
       const orderResponse = await ordersAPI.create({
         items: cartItems.map(item => ({
           productId: item.id,
           quantity: item.quantity
         })),
         shippingAddress: {
-          fullName: shippingInfo.fullName,
-          address: shippingInfo.address,
-          city: shippingInfo.city,
-          zipCode: shippingInfo.zipCode,
-          country: shippingInfo.country,
-          phone: shippingInfo.phone || undefined
+          fullName: shippingInfo.fullName.trim(),
+          address: shippingInfo.address.trim(),
+          city: shippingInfo.city.trim(),
+          zipCode: shippingInfo.zipCode.trim(),
+          country: shippingInfo.country.trim(),
+          ...(shippingInfo.phone?.trim() && { phone: shippingInfo.phone.trim() })
         },
         billingAddress: {
-          fullName: finalBillingInfo.fullName,
-          address: finalBillingInfo.address,
-          city: finalBillingInfo.city,
-          zipCode: finalBillingInfo.zipCode,
-          country: finalBillingInfo.country,
-          phone: finalBillingInfo.phone || undefined
+          fullName: finalBillingInfo.fullName.trim(),
+          address: finalBillingInfo.address.trim(),
+          city: finalBillingInfo.city.trim(),
+          zipCode: finalBillingInfo.zipCode.trim(),
+          country: finalBillingInfo.country.trim(),
+          ...(finalBillingInfo.phone?.trim() && { phone: finalBillingInfo.phone.trim() })
         }
       });
 
       const orderId = orderResponse.order.id;
+      const orderNumber = orderResponse.order.orderNumber || orderId;
 
-      // Create Stripe checkout session
-      const checkoutResponse = await checkoutAPI.createSession(orderId);
+      // Show success message
+      toast.success(`Order #${orderNumber} created successfully!`, { id: 'checkout' });
+      setSuccess(true);
 
-      // Redirect to Stripe checkout
-      if (checkoutResponse.url) {
-        window.location.href = checkoutResponse.url;
-      } else {
-        throw new Error('No checkout URL received');
+      // Create Stripe Payment Intent
+      toast.loading('Setting up secure payment...', { id: 'checkout' });
+      
+      try {
+        console.log('Creating Stripe payment intent for order:', orderId);
+        const paymentIntentResponse = await paymentIntentAPI.create(orderId);
+        console.log('Payment intent response received:', paymentIntentResponse);
+        
+        // Check if Stripe is not configured
+        if (paymentIntentResponse.error && paymentIntentResponse.code === 'STRIPE_NOT_CONFIGURED') {
+          console.error('Stripe not configured error:', paymentIntentResponse);
+          toast.dismiss('checkout');
+          toast.error('Payment gateway not configured. Please contact support.');
+          setError('Payment gateway is not configured. Please set STRIPE_SECRET_KEY in backend environment variables.');
+          setProcessing(false);
+          setSuccess(false);
+          return;
+        }
+
+        // Check if response has error
+        if (paymentIntentResponse.error) {
+          console.error('Payment intent error in response:', paymentIntentResponse);
+          throw new Error(paymentIntentResponse.error || 'Failed to create payment intent');
+        }
+
+        // Show payment form
+        if (paymentIntentResponse.clientSecret) {
+          console.log('Payment intent created, showing payment form');
+          toast.dismiss('checkout');
+          setClientSecret(paymentIntentResponse.clientSecret);
+          setCurrentOrderId(orderId);
+          setShowPaymentForm(true);
+          setProcessing(false);
+          // Scroll to payment form
+          setTimeout(() => {
+            const paymentSection = document.getElementById('payment-section');
+            if (paymentSection) {
+              paymentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 100);
+        } else {
+          console.error('No client secret in response:', paymentIntentResponse);
+          throw new Error('No client secret received from payment gateway');
+        }
+      } catch (paymentErr: any) {
+        console.error('Stripe payment intent error:', paymentErr);
+        console.error('Error response:', paymentErr.response?.data);
+        console.error('Error status:', paymentErr.response?.status);
+        
+        // Handle Stripe not configured error
+        if (paymentErr.response?.data?.code === 'STRIPE_NOT_CONFIGURED' || 
+            paymentErr.response?.data?.error?.includes('not configured') ||
+            paymentErr.response?.data?.error?.includes('Payment service not configured')) {
+          toast.dismiss('checkout');
+          toast.error('Payment gateway not configured');
+          setError('Payment gateway is not configured. Please set STRIPE_SECRET_KEY in backend environment variables.');
+        } else if (paymentErr.response?.data?.error) {
+          // Show specific error from backend
+          toast.dismiss('checkout');
+          toast.error(paymentErr.response.data.error);
+          setError(paymentErr.response.data.error + (paymentErr.response.data.details ? ': ' + paymentErr.response.data.details : ''));
+        } else {
+          throw paymentErr; // Re-throw to be caught by outer catch
+        }
+        setProcessing(false);
+        setSuccess(false);
+        return;
       }
     } catch (err: any) {
       console.error('Checkout error:', err);
-      setError(err.response?.data?.error || 'Failed to process checkout. Please try again.');
+      console.error('Error response:', err.response?.data);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        data: err.response?.data
+      });
+      
+      toast.dismiss('checkout');
+      
+      // Handle specific error cases
+      let errorMessage = 'Failed to process checkout. Please try again.';
+      
+      if (err.response?.data?.code === 'STRIPE_NOT_CONFIGURED') {
+        errorMessage = 'Payment gateway is not configured. Please set STRIPE_SECRET_KEY in backend environment variables.';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+        if (err.response.data.details) {
+          errorMessage += `: ${err.response.data.details}`;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage, { duration: 5000 });
+      setError(errorMessage);
       setProcessing(false);
+      setSuccess(false);
     }
   };
 
@@ -199,7 +363,10 @@ export function CartPage() {
                   type="text"
                   placeholder="Full Name *"
                   value={shippingInfo.fullName}
-                  onChange={(e) => setShippingInfo({ ...shippingInfo, fullName: e.target.value })}
+                  onChange={(e) => {
+                    setShippingInfo({ ...shippingInfo, fullName: e.target.value });
+                    if (error) setError(null);
+                  }}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   required
                 />
@@ -313,21 +480,111 @@ export function CartPage() {
                 </div>
               )}
 
-              <button
-                onClick={handleCheckout}
-                disabled={processing || cartItems.length === 0}
-                className="w-full bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-3 sm:py-4 rounded-lg transition-all transform hover:scale-105 text-sm sm:text-base flex items-center justify-center gap-2"
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Proceed to Checkout'
-                )}
-              </button>
+              {!showPaymentForm && (
+                <button
+                  onClick={handleCheckout}
+                  disabled={processing || cartItems.length === 0 || success}
+                  className={`w-full ${
+                    success 
+                      ? 'bg-green-600 cursor-default' 
+                      : 'bg-green-500 hover:bg-green-600 disabled:bg-slate-400 disabled:cursor-not-allowed'
+                  } text-white py-3 sm:py-4 rounded-lg transition-all transform ${
+                    !processing && !success ? 'hover:scale-105' : ''
+                  } text-sm sm:text-base flex items-center justify-center gap-2 font-semibold`}
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : success ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Order Created!
+                    </>
+                  ) : (
+                    'Proceed to Checkout'
+                  )}
+                </button>
+              )}
             </div>
+
+            {/* Payment Form Section */}
+            {showPaymentForm && clientSecret && currentOrderId && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? (
+              <div id="payment-section" className="bg-white rounded-xl p-4 sm:p-6 shadow-md mt-4 sm:mt-6">
+                <h2 className="text-slate-900 text-xl sm:text-2xl mb-4 sm:mb-6">Payment Information</h2>
+                <StripeProvider clientSecret={clientSecret}>
+                  <StripePaymentForm
+                    clientSecret={clientSecret}
+                    orderId={currentOrderId}
+                    amount={total}
+                    onSuccess={() => {
+                      toast.success("Payment successful! Redirecting...");
+                      clearCart();
+                      setTimeout(() => {
+                        router.push(`/orders/${currentOrderId}`);
+                      }, 1500);
+                    }}
+                    onError={(error) => {
+                      setError(error);
+                    }}
+                    onRetry={async () => {
+                      // Create new PaymentIntent on retry
+                      if (!currentOrderId) return;
+                      try {
+                        console.log("[CartPage] Creating new PaymentIntent for retry...");
+                        const paymentIntentResponse = await paymentIntentAPI.create(currentOrderId);
+                        if (paymentIntentResponse.clientSecret) {
+                          setClientSecret(paymentIntentResponse.clientSecret);
+                          setError(null);
+                          toast.success("New payment session created. Please try again.");
+                        }
+                      } catch (retryError: any) {
+                        console.error("[CartPage] Error creating new PaymentIntent:", retryError);
+                        setError("Failed to create new payment session. Please refresh the page.");
+                      }
+                    }}
+                  />
+                </StripeProvider>
+                <button
+                  onClick={() => {
+                    setShowPaymentForm(false);
+                    setClientSecret(null);
+                    setCurrentOrderId(null);
+                    setSuccess(false);
+                    setError(null);
+                  }}
+                  className="mt-4 w-full px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-all"
+                >
+                  Cancel Payment
+                </button>
+              </div>
+            ) : showPaymentForm && (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) ? (
+              <div id="payment-section" className="bg-white rounded-xl p-4 sm:p-6 shadow-md mt-4 sm:mt-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-600 text-sm font-medium mb-2">
+                    Stripe Configuration Missing
+                  </p>
+                  <p className="text-red-600 text-xs mb-3">
+                    Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your frontend/.env.local file.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowPaymentForm(false);
+                      setClientSecret(null);
+                      setCurrentOrderId(null);
+                      setSuccess(false);
+                      setError(null);
+                    }}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
