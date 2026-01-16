@@ -7,6 +7,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3001',
   'http://127.0.0.1:3000',
   'https://vytrion-commerce.vercel.app',
+  'https://vytrion-technologies.vercel.app',
 ]
 
 export function middleware(request: NextRequest) {
@@ -71,12 +72,16 @@ function setSecurityHeaders(response: NextResponse, origin: string) {
   } else {
     // In production, check if origin is in allowed list
     const normalizedOrigin = origin.replace(/\/$/, '') // Remove trailing slash
-    const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => 
-      normalizedOrigin === allowed.replace(/\/$/, '') || normalizedOrigin.includes(allowed.replace(/\/$/, ''))
-    )
+    const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => {
+      const normalizedAllowed = allowed.replace(/\/$/, '')
+      return normalizedOrigin === normalizedAllowed || normalizedOrigin.includes(normalizedAllowed)
+    })
     
-    if (isAllowedOrigin) {
+    if (isAllowedOrigin && origin) {
       response.headers.set('Access-Control-Allow-Origin', origin)
+    } else if (!origin) {
+      // If no origin header, allow it (for same-origin requests)
+      response.headers.set('Access-Control-Allow-Origin', '*')
     }
   }
 

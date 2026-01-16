@@ -3,10 +3,17 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 /**
  * IMPORTANT:
  * Frontend ENV (Vercel):
- * NEXT_PUBLIC_API_URL = https://victor-backend-.vercel.app/api
+ * NEXT_PUBLIC_API_URL = https://vytrion-backend.vercel.app/api
+ * 
+ * Note: Make sure there's NO trailing slash in the URL
  */
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+const getApiBaseUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+  // Remove trailing slash to prevent double slashes
+  return url.replace(/\/$/, '')
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 // Axios instance
 const api: AxiosInstance = axios.create({
